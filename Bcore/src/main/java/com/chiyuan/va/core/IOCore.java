@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.os.Environment;
 import android.os.Process;
 import android.text.TextUtils;
 
@@ -17,11 +16,10 @@ import java.util.Objects;
 import java.util.Set;
 
 import com.chiyuan.va.ChiyuanVACore;
-
 import com.chiyuan.va.core.env.BEnvironment;
 import com.chiyuan.va.utils.FileUtils;
+import com.chiyuan.va.utils.Slog;
 import com.chiyuan.va.utils.TrieTree;
-
 
 @SuppressLint("SdCardPath")
 public class IOCore {
@@ -38,13 +36,13 @@ public class IOCore {
         return sIOCore;
     }
 
-    
     public void addRedirect(String origPath, String redirectPath) {
-        if (TextUtils.isEmpty(origPath) || TextUtils.isEmpty(redirectPath) || mRedirectMap.get(origPath) != null)
+        if (TextUtils.isEmpty(origPath) || TextUtils.isEmpty(redirectPath) || mRedirectMap.get(origPath) != null) {
             return;
-        
+        }
         mTrieTree.add(origPath);
         mRedirectMap.put(origPath, redirectPath);
+
         File redirectFile = new File(redirectPath);
         if (!redirectFile.exists()) {
             FileUtils.mkdirs(redirectPath);
@@ -53,108 +51,170 @@ public class IOCore {
     }
 
     public void addBlackRedirect(String path) {
-        if (TextUtils.isEmpty(path))
+        if (TextUtils.isEmpty(path)) {
             return;
+        }
         sBlackTree.add(path);
     }
 
     public String redirectPath(String path) {
-        if (TextUtils.isEmpty(path))
+        if (TextUtils.isEmpty(path)) {
             return path;
+        }
         if (path.contains("/chiyuanva/")) {
             return path;
         }
+
         String search = sBlackTree.search(path);
-        if (!TextUtils.isEmpty(search))
+        if (!TextUtils.isEmpty(search)) {
             return search;
+        }
 
-        
         String key = mTrieTree.search(path);
-        if (!TextUtils.isEmpty(key))
+        if (!TextUtils.isEmpty(key)) {
             path = path.replace(key, Objects.requireNonNull(mRedirectMap.get(key)));
-
+        }
         return path;
     }
 
     public File redirectPath(File path) {
-        if (path == null)
+        if (path == null) {
             return null;
-        String pathStr = path.getAbsolutePath();
-        return new File(redirectPath(pathStr));
+        }
+        return new File(redirectPath(path.getAbsolutePath()));
     }
 
     public String redirectPath(String path, Map<String, String> rule) {
-        if (TextUtils.isEmpty(path))
+        if (TextUtils.isEmpty(path)) {
             return path;
+        }
 
-        
         String key = mTrieTree.search(path);
-        if (!TextUtils.isEmpty(key))
+        if (!TextUtils.isEmpty(key)) {
             path = path.replace(key, Objects.requireNonNull(rule.get(key)));
-
+        }
         return path;
     }
 
     public File redirectPath(File path, Map<String, String> rule) {
-        if (path == null)
+        if (path == null) {
             return null;
-        String pathStr = path.getAbsolutePath();
-        return new File(redirectPath(pathStr, rule));
+        }
+        return new File(redirectPath(path.getAbsolutePath(), rule));
     }
 
-    
-
     public void enableRedirect(Context context) {
+        enableRedirect(context, null);
+    }
+
+    public void enableRedirect(Context context, String processName) {
         Map<String, String> rule = new LinkedHashMap<>();
         Set<String> blackRule = new HashSet<>();
         String packageName = context.getPackageName();
 
         try {
-            ApplicationInfo packageInfo = ChiyuanVACore.getBPackageManager().getApplicationInfo(packageName, PackageManager.GET_META_DATA, ChiyuanVACore.getUserId());
-            int systemUserId = ChiyuanVACore.getHostUserId();
+            ApplicationInfo packageInfo = ChiyuanVACore.getBPackageManager()
+                    .getApplicationInfo(packageName, PackageManager.GET_META_DATA, ChiyuanVACore.getUserId());
+
+            int hostUserId = ChiyuanVACore.getHostUserId();
+            int virtualUserId = ChiyuanVACore.getUserId();
+
+            File dataDir = new File(packageInfo.dataDir);
+            File deDataDir = BEnvironment.getDeDataDir(packageName, virtualUserId);
+
+            FileUtils.mkdirs(dataDir.getAbsolutePath());
+            FileUtils.mkdirs(deDataDir.getAbsolutePath());
+            ensureGuestDataLayout(dataDir, deDataDir);
+
             rule.put(String.format("/data/data/%s/lib", packageName), packageInfo.nativeLibraryDir);
-            rule.put(String.format("/data/user/%d/%s/lib", systemUserId, packageName), packageInfo.nativeLibraryDir);
+            rule.put(String.format("/data/user/%d/%s/lib", hostUserId, packageName), packageInfo.nativeLibraryDir);
 
             rule.put(String.format("/data/data/%s", packageName), packageInfo.dataDir);
-            rule.put(String.format("/data/user/%d/%s", systemUserId, packageName), packageInfo.dataDir);
+            rule.put(String.format("/data/user/%d/%s", hostUserId, packageName), packageInfo.dataDir);
 
-            
+            rule.put(String.format("/data/user_de/%d/%s", hostUserId, packageName), deDataDir.getAbsolutePath());
+
             File profilesRoot = new File(BEnvironment.getVirtualRoot(), "profiles");
             FileUtils.mkdirs(profilesRoot.getAbsolutePath());
-            
             rule.put("/data/misc/profiles", profilesRoot.getAbsolutePath());
 
-            File profilesCurDir = new File(profilesRoot, String.format("cur/%d/%s", ChiyuanVACore.getUserId(), packageName));
-            File profilesRefDir = new File(profilesRoot, String.format("ref/%d/%s", ChiyuanVACore.getUserId(), packageName));
+            File profilesCurDir = new File(
+                    profilesRoot,
+                    String.format("cur/%d/%s", virtualUserId, packageName)
+            );
+            File profilesRefDir = new File(
+                    profilesRoot,
+                    String.format("ref/%d/%s", virtualUserId, packageName)
+            );
             FileUtils.mkdirs(profilesCurDir.getAbsolutePath());
             FileUtils.mkdirs(profilesRefDir.getAbsolutePath());
-            rule.put(String.format("/data/misc/profiles/cur/%d/%s", ChiyuanVACore.getUserId(), packageName), profilesCurDir.getAbsolutePath());
-            rule.put(String.format("/data/misc/profiles/ref/%d/%s", ChiyuanVACore.getUserId(), packageName), profilesRefDir.getAbsolutePath());
+
+            rule.put(
+                    String.format("/data/misc/profiles/cur/%d/%s", virtualUserId, packageName),
+                    profilesCurDir.getAbsolutePath()
+            );
+            rule.put(
+                    String.format("/data/misc/profiles/ref/%d/%s", virtualUserId, packageName),
+                    profilesRefDir.getAbsolutePath()
+            );
 
             if (ChiyuanVACore.getContext().getExternalCacheDir() != null && context.getExternalCacheDir() != null) {
-                File external = BEnvironment.getExternalUserDir(ChiyuanVACore.getUserId());
-
-                
+                File external = BEnvironment.getExternalUserDir(virtualUserId);
                 rule.put("/sdcard", external.getAbsolutePath());
-                rule.put(String.format("/storage/emulated/%d", systemUserId), external.getAbsolutePath());
+                rule.put(String.format("/storage/emulated/%d", hostUserId), external.getAbsolutePath());
 
                 blackRule.add("/sdcard/Pictures");
-                blackRule.add(String.format("/storage/emulated/%d/Pictures", systemUserId));
+                blackRule.add(String.format("/storage/emulated/%d/Pictures", hostUserId));
             }
+
             if (ChiyuanVACore.get().isHideRoot()) {
                 hideRoot(rule);
             }
-            proc(rule);
+
+            if (!isLikelyWebViewProcess(processName)) {
+                proc(rule);
+            } else {
+                Slog.d(TAG, "Skip /proc redirect for WebView-like process: " + processName);
+            }
         } catch (Exception e) {
-            e.printStackTrace();
+            Slog.e(TAG, "enableRedirect failed for " + packageName, e);
         }
-        for (String key : rule.keySet()) {
-            get().addRedirect(key, rule.get(key));
+
+        for (Map.Entry<String, String> entry : rule.entrySet()) {
+            get().addRedirect(entry.getKey(), entry.getValue());
         }
         for (String s : blackRule) {
             get().addBlackRedirect(s);
         }
         NativeCore.enableIO();
+    }
+
+    private void ensureGuestDataLayout(File dataDir, File deDataDir) {
+        FileUtils.mkdirs(new File(dataDir, "app_webview").getAbsolutePath());
+        FileUtils.mkdirs(new File(dataDir, "cache").getAbsolutePath());
+        FileUtils.mkdirs(new File(dataDir, "code_cache").getAbsolutePath());
+        FileUtils.mkdirs(new File(dataDir, "files").getAbsolutePath());
+        FileUtils.mkdirs(new File(dataDir, "databases").getAbsolutePath());
+        FileUtils.mkdirs(new File(dataDir, "shared_prefs").getAbsolutePath());
+        FileUtils.mkdirs(new File(dataDir, "no_backup").getAbsolutePath());
+
+        FileUtils.mkdirs(new File(deDataDir, "app_webview").getAbsolutePath());
+        FileUtils.mkdirs(new File(deDataDir, "cache").getAbsolutePath());
+        FileUtils.mkdirs(new File(deDataDir, "code_cache").getAbsolutePath());
+        FileUtils.mkdirs(new File(deDataDir, "files").getAbsolutePath());
+        FileUtils.mkdirs(new File(deDataDir, "databases").getAbsolutePath());
+        FileUtils.mkdirs(new File(deDataDir, "shared_prefs").getAbsolutePath());
+        FileUtils.mkdirs(new File(deDataDir, "no_backup").getAbsolutePath());
+    }
+
+    private boolean isLikelyWebViewProcess(String processName) {
+        if (TextUtils.isEmpty(processName)) {
+            return false;
+        }
+        String lower = processName.toLowerCase();
+        return lower.contains("webview")
+                || lower.endsWith(":wv")
+                || lower.endsWith(":web");
     }
 
     private void hideRoot(Map<String, String> rule) {
@@ -173,6 +233,7 @@ public class IOCore {
     private void proc(Map<String, String> rule) {
         int appPid = ChiyuanVACore.getAppPid();
         int pid = Process.myPid();
+
         String selfProc = "/proc/self/";
         String proc = "/proc/" + pid + "/";
 

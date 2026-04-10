@@ -388,9 +388,7 @@ public class BActivityThread extends IBActivityThread.Stub {
                 StrictModeCompat.disableDeathOnFileUriExposure();
             }
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            WebView.setDataDirectorySuffix(getUserId() + ":" + packageName + ":" + processName);
-        }
+        configureWebViewDataDirectory(packageName, processName);
 
         VirtualRuntime.setupRuntime(processName, applicationInfo);
 
@@ -401,7 +399,7 @@ public class BActivityThread extends IBActivityThread.Stub {
 
         NativeCore.init(Build.VERSION.SDK_INT);
         assert packageContext != null;
-        IOCore.get().enableRedirect(packageContext);
+        IOCore.get().enableRedirect(packageContext, processName);
 
         AppBindData bindData = new AppBindData();
         bindData.appInfo = applicationInfo;
@@ -420,9 +418,13 @@ public class BActivityThread extends IBActivityThread.Stub {
 
         // 自动启用 proc 伪造（反GG修改器虚拟环境检测）
         try {
-            NativeCore.startProcSpoof(packageName);
-        } catch (Throwable ignored) {
-        }
+    if (!isLikelyWebViewProcess(processName)) {
+        NativeCore.startProcSpoof(packageName);
+    } else {
+        Slog.d(TAG, "Skip proc spoof for WebView-like process: " + processName);
+    }
+} catch (Throwable ignored) {
+}
 
         
         if (BRNetworkSecurityConfigProvider.getRealClass() != null) {
@@ -490,7 +492,53 @@ public class BActivityThread extends IBActivityThread.Stub {
             throw new RuntimeException("Unable to makeApplication", e);
         }
     }
-    
+    private void configureWebViewDataDirectory(String packageName, String processName) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+        return;
+    }
+    String suffix = buildWebViewSuffix(getUserId(), packageName, processName);
+    try {
+        WebView.setDataDirectorySuffix(suffix);
+        Slog.d(TAG, "Set WebView data directory suffix: " + suffix);
+    } catch (IllegalStateException e) {
+        Slog.w(TAG, "WebView already initialized before suffix setup for " + processName + ": " + e.getMessage());
+    } catch (Throwable e) {
+        Slog.w(TAG, "Failed to set WebView data directory suffix for " + processName, e);
+    }
+}
+
+private boolean isLikelyWebViewProcess(String processName) {
+    if (TextUtils.isEmpty(processName)) {
+        return false;
+    }
+    String lower = processName.toLowerCase();
+    return lower.contains("webview")
+            || lower.endsWith(":wv")
+            || lower.endsWith(":web");
+}
+
+private String buildWebViewSuffix(int userId, String packageName, String processName) {
+    String safePkg = sanitizeWebViewSuffixPart(packageName);
+    String safeProc = sanitizeWebViewSuffixPart(processName);
+    String suffix = "u" + userId + "_" + safePkg + "_" + safeProc;
+    return suffix.length() > 120 ? suffix.substring(0, 120) : suffix;
+}
+
+private String sanitizeWebViewSuffixPart(String value) {
+    if (TextUtils.isEmpty(value)) {
+        return "default";
+    }
+    String sanitized = value
+            .replace(File.separatorChar, '_')
+            .replace(':', '_')
+            .replaceAll("[^A-Za-z0-9._-]", "_");
+
+    while (sanitized.contains("__")) {
+        sanitized = sanitized.replace("__", "_");
+    }
+    sanitized = sanitized.replaceAll("^_+|_+$", "");
+    return TextUtils.isEmpty(sanitized) ? "default" : sanitized;
+}
     
     private void initializeJarEnvironment() {
         try {
