@@ -1,0 +1,32 @@
+package com.chiyuan.va.reflection.utils;
+
+import com.chiyuan.va.reflection.annotation.BClass;
+import com.chiyuan.va.reflection.annotation.BClassName;
+import com.chiyuan.va.reflection.annotation.BClassNameNotProcess;
+
+
+public class ClassUtil {
+    public static Class<?> classReady(Class<?> clazz) {
+        BClassNameNotProcess bClassNameNotProcess = clazz.getAnnotation(BClassNameNotProcess.class);
+        if (bClassNameNotProcess != null) {
+            return classReady(bClassNameNotProcess.value());
+        }
+        BClass annotation = clazz.getAnnotation(BClass.class);
+        if (annotation != null) {
+            return annotation.value();
+        }
+        BClassName bClassName = clazz.getAnnotation(BClassName.class);
+        if (bClassName != null) {
+            return classReady(bClassName.value());
+        }
+        return null;
+    }
+
+    private static Class<?> classReady(String clazz) {
+        try {
+            return Class.forName(clazz);
+        } catch (ClassNotFoundException ignored) {
+        }
+        return null;
+    }
+}

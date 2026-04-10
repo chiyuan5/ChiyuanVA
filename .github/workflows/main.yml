@@ -1,0 +1,81 @@
+name: Build Bcore AAR and black-reflection JAR
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - ".github/workflows/build-bcore-and-blackreflection.yml"
+      - "settings.gradle"
+      - "build.gradle"
+      - "gradle.properties"
+      - "Bcore/**"
+      - "black-reflection/**"
+      - "compiler/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android packages
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            "ndk;29.0.13846066"
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build black-reflection JAR
+        env:
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+        run: ./gradlew :black-reflection:jar --stacktrace --no-daemon
+
+      - name: Build Bcore release AAR
+        env:
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+        run: ./gradlew :Bcore:assembleRelease --stacktrace --no-daemon
+
+      - name: Show outputs
+        shell: bash
+        run: |
+          echo "==== AAR ===="
+          find Bcore/build -type f | sort
+          echo "==== JAR ===="
+          find black-reflection/build -type f | sort
+
+      - name: Upload Bcore AAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bcore-release-aar
+          path: Bcore/build/outputs/aar/*.aar
+          if-no-files-found: error
+
+      - name: Upload black-reflection JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: black-reflection-jar
+          path: black-reflection/build/libs/*.jar
+          if-no-files-found: error
