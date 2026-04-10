@@ -117,7 +117,17 @@ public class IOCore {
 
             rule.put(String.format("/data/data/%s", packageName), packageInfo.dataDir);
             rule.put(String.format("/data/user/%d/%s", systemUserId, packageName), packageInfo.dataDir);
-
+	   // ★ 新增：WebView 数据目录重定向到沙盒，防止多进程冲突与 ERR_CACHE_MISS
+String hostPkg        = ChiyuanVACore.getHostPkg();
+String webViewVADir   = new File(packageInfo.dataDir, "app_webview").getAbsolutePath();
+FileUtils.mkdirs(webViewVADir);
+rule.put(String.format("/data/data/%s/app_webview", hostPkg), webViewVADir);
+rule.put(String.format("/data/user/%d/%s/app_webview", systemUserId, hostPkg), webViewVADir);
+// WebView 进程（:WebViewSandboxed 等）写入的 cache 也重定向过来
+rule.put(String.format("/data/data/%s/cache/WebView", hostPkg),
+        new File(packageInfo.dataDir, "cache/WebView").getAbsolutePath());
+rule.put(String.format("/data/user/%d/%s/cache/WebView", systemUserId, hostPkg),
+        new File(packageInfo.dataDir, "cache/WebView").getAbsolutePath());
             
             File profilesRoot = new File(BEnvironment.getVirtualRoot(), "profiles");
             FileUtils.mkdirs(profilesRoot.getAbsolutePath());

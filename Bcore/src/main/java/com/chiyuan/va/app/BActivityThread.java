@@ -388,9 +388,17 @@ public class BActivityThread extends IBActivityThread.Stub {
                 StrictModeCompat.disableDeathOnFileUriExposure();
             }
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            WebView.setDataDirectorySuffix(getUserId() + ":" + packageName + ":" + processName);
-        }
+       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+    // 使用安全后缀（无冒号），避免 Chromium 路径解析失败导致 ERR_CACHE_MISS
+    String safeSuffix = getUserId()
+            + "_" + packageName.replace('.', '_')
+            + "_" + processName.replace('.', '_').replace(':', '_');
+    try {
+        WebView.setDataDirectorySuffix(safeSuffix);
+    } catch (Throwable ignored) {
+        // 部分 ROM 在 WebView 已初始化后调用会抛异常，忽略即可
+    }
+}
 
         VirtualRuntime.setupRuntime(processName, applicationInfo);
 
@@ -398,7 +406,9 @@ public class BActivityThread extends IBActivityThread.Stub {
         if (BuildCompat.isS()) {
             BRCompatibility.get().setTargetSdkVersion(applicationInfo.targetSdkVersion);
         }
+	WebViewProxy.initForProcess(packageName, processName, getUserId());
 
+VirtualRuntime.setupRuntime(processName, applicationInfo);
         NativeCore.init(Build.VERSION.SDK_INT);
         assert packageContext != null;
         IOCore.get().enableRedirect(packageContext);
