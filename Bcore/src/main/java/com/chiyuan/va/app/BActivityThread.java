@@ -73,7 +73,7 @@ import com.chiyuan.va.entity.am.ReceiverData;
 
 import com.chiyuan.va.fake.delegate.AppInstrumentation;
 import com.chiyuan.va.fake.delegate.ContentProviderDelegate;
-
+import com.chiyuan.va.fake.service.WebViewProxy;
 import com.chiyuan.va.fake.hook.HookManager;
 import com.chiyuan.va.fake.service.HCallbackProxy;
 import com.chiyuan.va.utils.Reflector;
