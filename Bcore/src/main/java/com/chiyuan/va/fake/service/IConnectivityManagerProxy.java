@@ -189,22 +189,28 @@ public class IConnectivityManagerProxy extends BinderInvocationStub {
         }
     }
 
+    private static void invokeNetworkCapabilitiesIntMethod(NetworkCapabilities nc, String methodName, int value) {
+        if (nc == null) return;
+        try {
+            Method method = findMethodRecursive(NetworkCapabilities.class, methodName, int.class);
+            if (method != null) {
+                method.invoke(nc, value);
+            }
+        } catch (Throwable e) {
+            Slog.w(TAG, methodName + " failed: " + e.getMessage());
+        }
+    }
+
     private static NetworkCapabilities createFallbackNetworkCapabilities() {
         if (Build.VERSION.SDK_INT < 21) return null;
         try {
             NetworkCapabilities nc = new NetworkCapabilities();
-            try {
-                nc.addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
-            } catch (Throwable ignored) {
-            }
-            try {
-                nc.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
-                nc.addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
-                nc.addCapability(NetworkCapabilities.NET_CAPABILITY_TRUSTED);
-                nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED);
-                nc.addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN);
-            } catch (Throwable ignored) {
-            }
+            invokeNetworkCapabilitiesIntMethod(nc, "addTransportType", NetworkCapabilities.TRANSPORT_WIFI);
+            invokeNetworkCapabilitiesIntMethod(nc, "addCapability", NetworkCapabilities.NET_CAPABILITY_INTERNET);
+            invokeNetworkCapabilitiesIntMethod(nc, "addCapability", NetworkCapabilities.NET_CAPABILITY_VALIDATED);
+            invokeNetworkCapabilitiesIntMethod(nc, "addCapability", NetworkCapabilities.NET_CAPABILITY_TRUSTED);
+            invokeNetworkCapabilitiesIntMethod(nc, "addCapability", NetworkCapabilities.NET_CAPABILITY_NOT_RESTRICTED);
+            invokeNetworkCapabilitiesIntMethod(nc, "addCapability", NetworkCapabilities.NET_CAPABILITY_NOT_VPN);
             return nc;
         } catch (Throwable e) {
             Slog.w(TAG, "createFallbackNetworkCapabilities failed: " + e.getMessage());
