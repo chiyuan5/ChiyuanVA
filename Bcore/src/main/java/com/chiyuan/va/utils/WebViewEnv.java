@@ -28,7 +28,10 @@ public final class WebViewEnv {
             return;
         }
         if (shouldUseDataDirectorySuffix() && sLegacyStateCleaned.compareAndSet(false, true)) {
-            clearLegacyWebViewState(packageName, userId);
+            // 不再在每次 guest 进程启动时主动清空 WebView 旧状态。
+            // 之前这样做虽然能规避目录冲突，但会把 cookies / prefs / 历史状态一起打掉，
+            // 某些 SDK 的协议页/隐私页会因此反复重试并伴随 ERR_CACHE_MISS。
+            Slog.d(TAG, "Skip aggressive legacy WebView cleanup for " + packageName + " on Android P+");
         }
         if (shouldUseDataDirectorySuffix()) {
             String suffix = buildStableSuffix(packageName, processName, userId);

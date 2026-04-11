@@ -75,13 +75,13 @@ public class IConnectivityManagerProxy extends BinderInvocationStub {
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         sanitizeSystemIdentityArgs(method, args);
 
-        // A 方案：在 guest 的 WebView 进程里，尽量不要改写网络栈返回值。
-        // 只保留上面的身份参数修正（package/uid/AttributionSource），其余全部透传给系统。
-        // 目的：避免 WebView 因为被伪造的 NetworkInfo/DNS/Capabilities 等导致页面加载异常。
-        if (isGuestWebViewProcess()) {
-            return invokeDirect(method, args);
-        }
-        return super.invoke(proxy, method, args);
+        // 这里统一走直通：只修正 package/uid/AttributionSource，
+        // 不再伪造 NetworkInfo / NetworkCapabilities / DNS / validated 状态。
+        // 原因：像 Chromium / UE4 / 第三方 SDK 这类组件会自己维护网络状态机，
+        // 伪造返回值很容易引发 WebView 页面异常、网络抖动误判、甚至重复拉起页面。
+        // 之前的 makeApplication 递归问题已经通过 origin binder/origin who 修复，
+        // 因此现在最稳妥的策略就是：Connectivity 代理只做“身份清洗”，其余全部透传系统。
+        return invokeDirect(method, args);
     }
 
     private Object invokeDirect(Method method, Object[] args) throws Throwable {
