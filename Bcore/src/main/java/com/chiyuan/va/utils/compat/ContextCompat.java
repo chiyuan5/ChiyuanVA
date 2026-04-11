@@ -30,13 +30,17 @@ public class ContextCompat {
         return ChiyuanVACore.getHostPkg();
     }
 
+    private static String getSystemIdentityPackageName() {
+        return ChiyuanVACore.getHostPkg();
+    }
+
     public static void fixAttributionSourceState(Object obj, int uid) {
         Object mAttributionSourceState;
         if (obj != null && BRAttributionSource.get(obj)._check_mAttributionSourceState() != null) {
             mAttributionSourceState = BRAttributionSource.get(obj).mAttributionSourceState();
 
             AttributionSourceStateContext attributionSourceStateContext = BRAttributionSourceState.get(mAttributionSourceState);
-            attributionSourceStateContext._set_packageName(getVisiblePackageName());
+            attributionSourceStateContext._set_packageName(getSystemIdentityPackageName());
             attributionSourceStateContext._set_uid(uid);
             fixAttributionSourceState(BRAttributionSource.get(obj).getNext(), uid);
         }
@@ -76,7 +80,7 @@ public class ContextCompat {
             BRContextImplKitkat.get(context)._set_mOpPackageName(getOpPackageName());
             
             try {
-                BRContentResolver.get(context.getContentResolver())._set_mPackageName(getVisiblePackageName());
+                BRContentResolver.get(context.getContentResolver())._set_mPackageName(getSystemIdentityPackageName());
             } catch (Exception e) {
                 Slog.w(TAG, "Failed to fix content resolver: " + e.getMessage());
             }

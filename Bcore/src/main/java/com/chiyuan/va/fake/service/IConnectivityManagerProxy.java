@@ -15,11 +15,14 @@ import java.util.List;
 
 import black.android.net.BRIConnectivityManagerStub;
 import black.android.os.BRServiceManager;
+import com.chiyuan.va.ChiyuanVACore;
 import com.chiyuan.va.fake.hook.BinderInvocationStub;
 import com.chiyuan.va.fake.hook.ScanClass;
 import com.chiyuan.va.fake.hook.MethodHook;
 import com.chiyuan.va.fake.hook.ProxyMethod;
+import com.chiyuan.va.utils.MethodParameterUtils;
 import com.chiyuan.va.utils.Slog;
+import com.chiyuan.va.utils.compat.ContextCompat;
 
 
 @ScanClass(VpnCommonProxy.class)
@@ -43,6 +46,32 @@ public class IConnectivityManagerProxy extends BinderInvocationStub {
     @Override
     public boolean isBadEnv() {
         return false;
+    }
+
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        sanitizeSystemIdentityArgs(method, args);
+        return super.invoke(proxy, method, args);
+    }
+
+    private void sanitizeSystemIdentityArgs(Method method, Object[] args) {
+        if (args == null || args.length == 0) {
+            return;
+        }
+        MethodParameterUtils.replaceAllAppPkg(args);
+        MethodParameterUtils.replaceFirstUid(args);
+        MethodParameterUtils.replaceLastUid(args);
+        for (Object arg : args) {
+            if (arg == null) {
+                continue;
+            }
+            if ("android.content.AttributionSource".equals(arg.getClass().getName())) {
+                try {
+                    ContextCompat.fixAttributionSourceState(arg, ChiyuanVACore.getHostUid());
+                } catch (Throwable ignored) {
+                }
+            }
+        }
     }
 
     
