@@ -89,8 +89,13 @@ public class IWebViewUpdateServiceProxy extends ClassInvocationStub {
     public static class IsMultiProcessEnabled extends MethodHook {
         @Override
         protected Object hook(Object who, Method method, Object[] args) throws Throwable {
-            Slog.d(TAG, "WebViewUpdateService: isMultiProcessEnabled called, returning false for single-process mode");
-            return false;
+            Slog.d(TAG, "WebViewUpdateService: isMultiProcessEnabled called");
+            try {
+                return method.invoke(who, args);
+            } catch (Exception e) {
+                Slog.w(TAG, "WebViewUpdateService: Failed to query multi-process status", e);
+                return false;
+            }
         }
     }
 

@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Environment;
 import android.os.Process;
 import android.text.TextUtils;
@@ -21,8 +20,6 @@ import com.chiyuan.va.ChiyuanVACore;
 
 import com.chiyuan.va.core.env.BEnvironment;
 import com.chiyuan.va.utils.FileUtils;
-import com.chiyuan.va.utils.Slog;
-import com.chiyuan.va.utils.WebViewEnv;
 import com.chiyuan.va.utils.TrieTree;
 
 
@@ -121,8 +118,6 @@ public class IOCore {
             rule.put(String.format("/data/data/%s", packageName), packageInfo.dataDir);
             rule.put(String.format("/data/user/%d/%s", systemUserId, packageName), packageInfo.dataDir);
 
-            configureWebViewRedirects(rule, packageName, packageInfo, systemUserId);
-
             
             File profilesRoot = new File(BEnvironment.getVirtualRoot(), "profiles");
             FileUtils.mkdirs(profilesRoot.getAbsolutePath());
@@ -160,37 +155,6 @@ public class IOCore {
             get().addBlackRedirect(s);
         }
         NativeCore.enableIO();
-    }
-
-    private void configureWebViewRedirects(Map<String, String> rule, String packageName,
-                                           ApplicationInfo packageInfo, int systemUserId) {
-        WebViewEnv.ensureGuestWebViewDirs(packageName, ChiyuanVACore.getUserId());
-
-        if (WebViewEnv.shouldUseDataDirectorySuffix()) {
-            Slog.d(TAG, "Skip WebView special IO redirect on Android P+; rely on WebView.setDataDirectorySuffix() for " + packageName);
-            return;
-        }
-
-        File webViewRoot = WebViewEnv.getGuestWebViewRoot(packageName, ChiyuanVACore.getUserId());
-        File webViewCacheRoot = WebViewEnv.getGuestWebViewCacheRoot(packageName, ChiyuanVACore.getUserId());
-
-        FileUtils.mkdirs(webViewRoot);
-        FileUtils.mkdirs(webViewCacheRoot);
-
-        String dataDir = packageInfo.dataDir;
-        if (TextUtils.isEmpty(dataDir)) {
-            dataDir = BEnvironment.getDataDir(packageName, ChiyuanVACore.getUserId()).getAbsolutePath();
-        }
-        String hostDataPath = String.format("/data/data/%s", packageName);
-        String hostUserPath = String.format("/data/user/%d/%s", systemUserId, packageName);
-
-        rule.put(hostDataPath + "/app_webview", webViewRoot.getAbsolutePath());
-        rule.put(hostUserPath + "/app_webview", webViewRoot.getAbsolutePath());
-        rule.put(hostDataPath + "/cache/WebView", webViewCacheRoot.getAbsolutePath());
-        rule.put(hostUserPath + "/cache/WebView", webViewCacheRoot.getAbsolutePath());
-
-        rule.put(dataDir + "/app_webview", webViewRoot.getAbsolutePath());
-        rule.put(dataDir + "/cache/WebView", webViewCacheRoot.getAbsolutePath());
     }
 
     private void hideRoot(Map<String, String> rule) {

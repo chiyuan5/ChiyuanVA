@@ -100,17 +100,12 @@ public class HookManager {
     private static final HookManager sHookManager = new HookManager();
 
     private final Map<Class<?>, IInjectHook> mInjectors = new HashMap<>();
-    private volatile boolean mInitCalled = false;
 
     public static HookManager get() {
         return sHookManager;
     }
 
-    public synchronized void init() {
-        if (mInitCalled) {
-            return;
-        }
-        mInitCalled = true;
+    public void init() {
         if (ChiyuanVACore.get().isBlackProcess() || ChiyuanVACore.get().isServerProcess()) {
             addInjector(new IDisplayManagerProxy());
             addInjector(new OsStub());
@@ -130,8 +125,11 @@ public class HookManager {
             addInjector(new IAudioServiceProxy());
             addInjector(new ISensorPrivacyManagerProxy());
             addInjector(new ContentResolverProxy());
+            addInjector(new IWebViewUpdateServiceProxy());
             addInjector(new SystemLibraryProxy());
             addInjector(new ReLinkerProxy());
+            addInjector(new WebViewProxy());
+            addInjector(new WebViewFactoryProxy());
             addInjector(new WorkManagerProxy());
             addInjector(new MediaRecorderProxy());
             addInjector(new AudioRecordProxy());
@@ -158,7 +156,9 @@ public class HookManager {
             addInjector(new IDevicePolicyManagerProxy());
             addInjector(new IAccountManagerProxy());
             addInjector(new IConnectivityManagerProxy());
-            addInjector(new IDnsResolverProxy());
+            // DNS resolver is intentionally not hooked here.
+            // Returning fabricated DNS results can break WebView/CDN resource loads.
+            // Prefer host/system DNS behavior instead.
                     addInjector(new IAttributionSourceProxy());
         addInjector(new IContentProviderProxy());
         addInjector(new ISettingsSystemProxy());
@@ -295,7 +295,8 @@ public class HookManager {
     public boolean areCriticalHooksInstalled() {
         String[] criticalHooks = {
             "IActivityManagerProxy",
-            "IPackageManagerProxy",
+            "IPackageManagerProxy", 
+            "WebViewProxy",
             "IContentProviderProxy"
         };
         
