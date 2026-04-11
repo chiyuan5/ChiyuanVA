@@ -16,6 +16,7 @@ import java.util.List;
 import black.android.net.BRIConnectivityManagerStub;
 import black.android.os.BRServiceManager;
 import com.chiyuan.va.ChiyuanVACore;
+import com.chiyuan.va.core.env.VirtualRuntime;
 import com.chiyuan.va.fake.hook.BinderInvocationStub;
 import com.chiyuan.va.fake.hook.ScanClass;
 import com.chiyuan.va.fake.hook.MethodHook;
@@ -51,7 +52,33 @@ public class IConnectivityManagerProxy extends BinderInvocationStub {
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         sanitizeSystemIdentityArgs(method, args);
+
+        // A 方案：在 guest 的 WebView 进程里，尽量不要改写网络栈返回值。
+        // 只保留上面的身份参数修正（package/uid/AttributionSource），其余全部透传给系统。
+        // 目的：避免 WebView 因为被伪造的 NetworkInfo/DNS/Capabilities 等导致页面加载异常。
+        if (isGuestWebViewProcess()) {
+            return invokeDirect(method, args);
+        }
         return super.invoke(proxy, method, args);
+    }
+
+    private Object invokeDirect(Method method, Object[] args) throws Throwable {
+        try {
+            return method.invoke(getWho(), args);
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            Throwable t = e.getTargetException();
+            throw t != null ? t : e;
+        }
+    }
+
+    private boolean isGuestWebViewProcess() {
+        try {
+            String pn = VirtualRuntime.getProcessName();
+            if (pn == null) return false;
+            return pn.toLowerCase().contains(":webview");
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 
     private void sanitizeSystemIdentityArgs(Method method, Object[] args) {
