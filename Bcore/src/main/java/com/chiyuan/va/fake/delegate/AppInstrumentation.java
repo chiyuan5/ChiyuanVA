@@ -126,12 +126,38 @@ public final class AppInstrumentation extends BaseInstrumentationDelegate implem
     public void callActivityOnCreate(Activity activity, Bundle icicle, PersistableBundle persistentState) {
         checkActivity(activity);
         super.callActivityOnCreate(activity, icicle, persistentState);
+        configureWebViewsDelayed(activity);
     }
 
     @Override
     public void callActivityOnCreate(Activity activity, Bundle icicle) {
         checkActivity(activity);
         super.callActivityOnCreate(activity, icicle);
+        configureWebViewsDelayed(activity);
+    }
+
+    /**
+     * 在 Activity.onCreate() 完成后延迟扫描并配置 WebView。
+     * 修复虚拟进程中 WebView 因 SELinux 阻止 netlink_route_socket
+     * 导致 Chromium 认为无网络而出现 net::ERR_CACHE_MISS 的问题。
+     */
+    private void configureWebViewsDelayed(final Activity activity) {
+        try {
+            // post到主线程队列，确保Activity.onCreate()中的WebView已创建
+            activity.getWindow().getDecorView().post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        com.chiyuan.va.utils.WebViewNetworkFix.fixWebViewsInViewTree(
+                                activity.getWindow().getDecorView());
+                    } catch (Throwable t) {
+                        Log.w(TAG, "configureWebViews failed", t);
+                    }
+                }
+            });
+        } catch (Throwable t) {
+            // ignore - window may not be ready
+        }
     }
 
     @Override
