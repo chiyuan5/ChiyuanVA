@@ -16,6 +16,7 @@ import java.util.Map;
 
 import com.chiyuan.va.ChiyuanVACore;
 import com.chiyuan.va.app.BActivityThread;
+import com.chiyuan.va.utils.WebViewEnv;
 
 
 public class SocialMediaAppCrashPrevention {
@@ -123,26 +124,17 @@ public class SocialMediaAppCrashPrevention {
     
     private static void hookWebViewDatabase() {
         try {
-            
             Context context = ChiyuanVACore.getContext();
-            if (context != null) {
-                String packageName = context.getPackageName();
-                String userId = String.valueOf(BActivityThread.getUserId());
-                String webViewDir = context.getApplicationInfo().dataDir + "/webview_" + userId;
-                
-                File webViewDirectory = new File(webViewDir);
-                if (!webViewDirectory.exists()) {
-                    webViewDirectory.mkdirs();
-                    Slog.d(TAG, "Created WebView directory: " + webViewDir);
-                }
-                
-                
-                System.setProperty("webview.data.dir", webViewDir);
-                System.setProperty("webview.cache.dir", webViewDir + "/cache");
-                System.setProperty("webview.cookies.dir", webViewDir + "/cookies");
+            String packageName = BActivityThread.getAppPackageName();
+            if (context == null || packageName == null) {
+                Slog.d(TAG, "Skipping eager WebView directory setup until guest bind is ready");
+                return;
             }
+            int userId = BActivityThread.getUserId();
+            WebViewEnv.ensureGuestWebViewDirs(packageName, userId);
+            Slog.d(TAG, "Prepared guest WebView directories for " + packageName + " user=" + userId);
         } catch (Exception e) {
-            Slog.w(TAG, "Could not hook WebViewDatabase: " + e.getMessage());
+            Slog.w(TAG, "Could not prepare WebView guest directory: " + e.getMessage());
         }
     }
     

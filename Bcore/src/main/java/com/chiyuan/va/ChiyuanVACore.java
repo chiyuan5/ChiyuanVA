@@ -92,8 +92,6 @@ public class ChiyuanVACore extends ClientConfiguration {
             StackTraceFilter.install();
             Slog.d(TAG, "Stack trace filter installed at class loading time");
             
-            SocialMediaAppCrashPrevention.initialize();
-            Slog.d(TAG, "Social media app crash prevention initialized at class loading time");
             
             DexCrashPrevention.initialize();
             Slog.d(TAG, "DEX crash prevention initialized at class loading time");
@@ -851,7 +849,13 @@ public class ChiyuanVACore extends ClientConfiguration {
 
         sContext = context;
         mClientConfiguration = clientConfiguration;
-        
+
+        try {
+            SocialMediaAppCrashPrevention.initialize();
+            Slog.d(TAG, "Social media app crash prevention initialized after base context attach");
+        } catch (Exception e) {
+            Slog.w(TAG, "Failed to initialize social media app crash prevention after context attach: " + e.getMessage());
+        }
         
         installSystemHooks();
         

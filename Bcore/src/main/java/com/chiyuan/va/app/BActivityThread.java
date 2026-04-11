@@ -78,6 +78,8 @@ import com.chiyuan.va.fake.hook.HookManager;
 import com.chiyuan.va.fake.service.HCallbackProxy;
 import com.chiyuan.va.utils.Reflector;
 import com.chiyuan.va.utils.SafeContextWrapper;
+import com.chiyuan.va.utils.GuestAppContext;
+import com.chiyuan.va.utils.WebViewEnv;
 import com.chiyuan.va.utils.GlobalContextWrapper;
 import com.chiyuan.va.utils.Slog;
 import com.chiyuan.va.utils.compat.ActivityManagerCompat;
@@ -373,10 +375,12 @@ public class BActivityThread extends IBActivityThread.Stub {
         Object boundApplication = BRActivityThread.get(ChiyuanVACore.mainThread()).mBoundApplication();
 
         Context packageContext = createPackageContext(applicationInfo);
-        Object loadedApk = BRContextImpl.get(packageContext).mPackageInfo();
+        Context contextImpl = unwrapContext(packageContext);
+        Object loadedApk = BRContextImpl.get(contextImpl).mPackageInfo();
         BRLoadedApk.get(loadedApk)._set_mSecurityViolation(false);
         
         BRLoadedApk.get(loadedApk)._set_mApplicationInfo(applicationInfo);
+        syncLoadedApkDataDirs(loadedApk, applicationInfo);
 
         int targetSdkVersion = applicationInfo.targetSdkVersion;
         if (targetSdkVersion < Build.VERSION_CODES.GINGERBREAD) {
@@ -388,9 +392,7 @@ public class BActivityThread extends IBActivityThread.Stub {
                 StrictModeCompat.disableDeathOnFileUriExposure();
             }
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            WebView.setDataDirectorySuffix(getUserId() + ":" + packageName + ":" + processName);
-        }
+        WebViewEnv.prepare(applicationInfo, packageName, processName, getUserId());
 
         VirtualRuntime.setupRuntime(processName, applicationInfo);
 
@@ -717,8 +719,16 @@ public class BActivityThread extends IBActivityThread.Stub {
                 Slog.e(TAG, "ChiyuanVACore.getContext() is null, cannot create fallback context");
                 return null;
             }
-            
-            
+
+            ApplicationInfo appInfo = null;
+            try {
+                appInfo = ChiyuanVACore.getBPackageManager().getApplicationInfo(packageName, PackageManager.GET_META_DATA, BActivityThread.getUserId());
+            } catch (Exception ignored) {
+            }
+            if (appInfo != null) {
+                return new GuestAppContext(baseContext, appInfo, BActivityThread.getUserId());
+            }
+
             return new ContextWrapper(baseContext) {
                 @Override
                 public String getPackageName() {
@@ -900,103 +910,113 @@ public class BActivityThread extends IBActivityThread.Stub {
     }
 
     public static Context createPackageContext(ApplicationInfo info) {
+        Context hostContext = ChiyuanVACore.getContext();
+        Context resolvedContext = null;
         try {
-            return ChiyuanVACore.getContext().createPackageContext(info.packageName,
-                    Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
+            if (hostContext != null) {
+                resolvedContext = hostContext.createPackageContext(info.packageName,
+                        Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
+            }
         } catch (Exception e) {
-            e.printStackTrace();
+            Slog.w(TAG, "Primary createPackageContext failed for " + info.packageName + ": " + e.getMessage());
         }
-        return null;
+        if (resolvedContext == null) {
+            resolvedContext = createMinimalPackageContext(info);
+        }
+        if (resolvedContext == null) {
+            resolvedContext = hostContext;
+        }
+        return new GuestAppContext(resolvedContext, info, BActivityThread.getUserId());
     }
 
     
     private static Context createMinimalPackageContext(ApplicationInfo info) {
-        try {
-            
-            Context baseContext = ChiyuanVACore.getContext();
-            
-            
-            try {
-                Context packageContext = baseContext.createPackageContext(info.packageName, 0);
-                if (packageContext != null) {
-                    Slog.d(TAG, "Successfully created package context with minimal flags for " + info.packageName);
-                    return packageContext;
-                }
-            } catch (Exception e) {
-                Slog.w(TAG, "Failed to create package context with minimal flags for " + info.packageName + ": " + e.getMessage());
-            }
-            
-            
-            try {
-                Context packageContext = baseContext.createPackageContext(info.packageName, Context.CONTEXT_IGNORE_SECURITY);
-                if (packageContext != null) {
-                    Slog.d(TAG, "Successfully created package context with ignore security for " + info.packageName);
-                    return packageContext;
-                }
-            } catch (Exception e) {
-                Slog.w(TAG, "Failed to create package context with ignore security for " + info.packageName + ": " + e.getMessage());
-            }
-            
-            
-            try {
-                Context packageContext = baseContext.createPackageContext(info.packageName, Context.CONTEXT_INCLUDE_CODE);
-                if (packageContext != null) {
-                    Slog.d(TAG, "Successfully created package context with include code for " + info.packageName);
-                    return packageContext;
-                }
-            } catch (Exception e) {
-                Slog.w(TAG, "Failed to create package context with include code for " + info.packageName + ": " + e.getMessage());
-            }
-            
-        } catch (Exception e) {
-            Slog.e(TAG, "Failed to create minimal package context for " + info.packageName + ": " + e.getMessage());
+        Context baseContext = ChiyuanVACore.getContext();
+        if (baseContext == null) {
+            return null;
         }
-        
-        
-        Slog.w(TAG, "Using base context as fallback for " + info.packageName);
-        return createWrappedBaseContext(info.packageName);
+
+        int[] flagsToTry = new int[]{
+                0,
+                Context.CONTEXT_IGNORE_SECURITY,
+                Context.CONTEXT_INCLUDE_CODE,
+                Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY
+        };
+        for (int flags : flagsToTry) {
+            try {
+                Context packageContext = baseContext.createPackageContext(info.packageName, flags);
+                if (packageContext != null) {
+                    Slog.d(TAG, "Successfully created package context with flags=" + flags + " for " + info.packageName);
+                    return packageContext;
+                }
+            } catch (Exception e) {
+                Slog.w(TAG, "Failed to create package context with flags=" + flags + " for " + info.packageName + ": " + e.getMessage());
+            }
+        }
+
+        Slog.w(TAG, "Falling back to wrapped host context for " + info.packageName);
+        return createWrappedBaseContext(info);
     }
 
     
-    private static Context createWrappedBaseContext(String packageName) {
+    private static Context createWrappedBaseContext(ApplicationInfo info) {
         try {
             Context baseContext = ChiyuanVACore.getContext();
-            
-            
-            return new ContextWrapper(baseContext) {
-                @Override
-                public String getPackageName() {
-                    return packageName;
-                }
-                
-                @Override
-                public PackageManager getPackageManager() {
-                    return baseContext.getPackageManager();
-                }
-                
-                @Override
-                public Resources getResources() {
-                    return baseContext.getResources();
-                }
-                
-                @Override
-                public ClassLoader getClassLoader() {
-                    return baseContext.getClassLoader();
-                }
-                
-                @Override
-                public Context getApplicationContext() {
-                    return baseContext.getApplicationContext();
-                }
-            };
+            if (baseContext == null) {
+                return null;
+            }
+            return new GuestAppContext(baseContext, info, BActivityThread.getUserId());
         } catch (Exception e) {
-            Slog.e(TAG, "Failed to create wrapped base context for " + packageName + ": " + e.getMessage());
-            
+            Slog.e(TAG, "Failed to create wrapped base context for " + info.packageName + ": " + e.getMessage());
             return ChiyuanVACore.getContext();
         }
     }
 
+    private static Context unwrapContext(Context context) {
+        Context current = context;
+        for (int i = 0; i < 8 && current instanceof ContextWrapper; i++) {
+            Context base = ((ContextWrapper) current).getBaseContext();
+            if (base == null || base == current) {
+                break;
+            }
+            current = base;
+        }
+        return current;
+    }
+
+    private static void syncLoadedApkDataDirs(Object loadedApk, ApplicationInfo applicationInfo) {
+        if (loadedApk == null || applicationInfo == null) {
+            return;
+        }
+        try {
+            Reflector.on(loadedApk).field("mApplicationInfo").set(applicationInfo);
+        } catch (Throwable ignored) {
+        }
+        try {
+            Reflector.on(loadedApk).field("mDataDir").set(applicationInfo.dataDir);
+        } catch (Throwable ignored) {
+        }
+        try {
+            if (!TextUtils.isEmpty(applicationInfo.dataDir)) {
+                Reflector.on(loadedApk).field("mDataDirFile").set(new File(applicationInfo.dataDir));
+                Reflector.on(loadedApk).field("mCredentialProtectedDataDirFile").set(new File(applicationInfo.dataDir));
+            }
+        } catch (Throwable ignored) {
+        }
+        try {
+            String deviceDir = applicationInfo.deviceProtectedDataDir;
+            if (TextUtils.isEmpty(deviceDir)) {
+                deviceDir = applicationInfo.dataDir;
+            }
+            if (!TextUtils.isEmpty(deviceDir)) {
+                Reflector.on(loadedApk).field("mDeviceProtectedDataDirFile").set(new File(deviceDir));
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
     private void installProviders(Context context, String processName, List<ProviderInfo> provider) {
+
         long origId = Binder.clearCallingIdentity();
         try {
             for (ProviderInfo providerInfo : provider) {

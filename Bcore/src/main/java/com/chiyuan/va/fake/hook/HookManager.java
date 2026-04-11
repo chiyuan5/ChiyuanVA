@@ -125,11 +125,8 @@ public class HookManager {
             addInjector(new IAudioServiceProxy());
             addInjector(new ISensorPrivacyManagerProxy());
             addInjector(new ContentResolverProxy());
-            addInjector(new IWebViewUpdateServiceProxy());
             addInjector(new SystemLibraryProxy());
             addInjector(new ReLinkerProxy());
-            addInjector(new WebViewProxy());
-            addInjector(new WebViewFactoryProxy());
             addInjector(new WorkManagerProxy());
             addInjector(new MediaRecorderProxy());
             addInjector(new AudioRecordProxy());
@@ -293,8 +290,7 @@ public class HookManager {
     public boolean areCriticalHooksInstalled() {
         String[] criticalHooks = {
             "IActivityManagerProxy",
-            "IPackageManagerProxy", 
-            "WebViewProxy",
+            "IPackageManagerProxy",
             "IContentProviderProxy"
         };
         

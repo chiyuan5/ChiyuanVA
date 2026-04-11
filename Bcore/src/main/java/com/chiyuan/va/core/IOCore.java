@@ -20,6 +20,7 @@ import com.chiyuan.va.ChiyuanVACore;
 
 import com.chiyuan.va.core.env.BEnvironment;
 import com.chiyuan.va.utils.FileUtils;
+import com.chiyuan.va.utils.WebViewEnv;
 import com.chiyuan.va.utils.TrieTree;
 
 
@@ -118,6 +119,8 @@ public class IOCore {
             rule.put(String.format("/data/data/%s", packageName), packageInfo.dataDir);
             rule.put(String.format("/data/user/%d/%s", systemUserId, packageName), packageInfo.dataDir);
 
+            configureWebViewRedirects(rule, packageName, packageInfo, systemUserId);
+
             
             File profilesRoot = new File(BEnvironment.getVirtualRoot(), "profiles");
             FileUtils.mkdirs(profilesRoot.getAbsolutePath());
@@ -155,6 +158,40 @@ public class IOCore {
             get().addBlackRedirect(s);
         }
         NativeCore.enableIO();
+    }
+
+    private void configureWebViewRedirects(Map<String, String> rule, String packageName,
+                                           ApplicationInfo packageInfo, int systemUserId) {
+        File webViewRoot = WebViewEnv.getGuestWebViewRoot(packageName, ChiyuanVACore.getUserId());
+        File webViewCacheRoot = WebViewEnv.getGuestWebViewCacheRoot(packageName, ChiyuanVACore.getUserId());
+        File webViewDbRoot = WebViewEnv.getGuestWebViewDatabaseRoot(packageName, ChiyuanVACore.getUserId());
+        File webViewPrefsRoot = WebViewEnv.getGuestWebViewPrefsRoot(packageName, ChiyuanVACore.getUserId());
+
+        FileUtils.mkdirs(webViewRoot);
+        FileUtils.mkdirs(webViewCacheRoot);
+        FileUtils.mkdirs(webViewDbRoot);
+        FileUtils.mkdirs(webViewPrefsRoot);
+
+        String dataDir = packageInfo.dataDir;
+        if (TextUtils.isEmpty(dataDir)) {
+            dataDir = BEnvironment.getDataDir(packageName, ChiyuanVACore.getUserId()).getAbsolutePath();
+        }
+        String hostDataPath = String.format("/data/data/%s", packageName);
+        String hostUserPath = String.format("/data/user/%d/%s", systemUserId, packageName);
+
+        rule.put(hostDataPath + "/app_webview", webViewRoot.getAbsolutePath());
+        rule.put(hostUserPath + "/app_webview", webViewRoot.getAbsolutePath());
+        rule.put(hostDataPath + "/cache/WebView", webViewCacheRoot.getAbsolutePath());
+        rule.put(hostUserPath + "/cache/WebView", webViewCacheRoot.getAbsolutePath());
+        rule.put(hostDataPath + "/databases", webViewDbRoot.getAbsolutePath());
+        rule.put(hostUserPath + "/databases", webViewDbRoot.getAbsolutePath());
+        rule.put(hostDataPath + "/shared_prefs", webViewPrefsRoot.getAbsolutePath());
+        rule.put(hostUserPath + "/shared_prefs", webViewPrefsRoot.getAbsolutePath());
+
+        rule.put(dataDir + "/app_webview", webViewRoot.getAbsolutePath());
+        rule.put(dataDir + "/cache/WebView", webViewCacheRoot.getAbsolutePath());
+        rule.put(dataDir + "/databases", webViewDbRoot.getAbsolutePath());
+        rule.put(dataDir + "/shared_prefs", webViewPrefsRoot.getAbsolutePath());
     }
 
     private void hideRoot(Map<String, String> rule) {
