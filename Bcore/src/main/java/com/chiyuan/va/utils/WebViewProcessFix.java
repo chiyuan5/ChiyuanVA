@@ -4,9 +4,6 @@ import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.os.Build;
 import android.text.TextUtils;
-import android.webkit.CookieManager;
-import android.webkit.WebView;
-
 import java.io.File;
 
 public final class WebViewProcessFix {
@@ -55,27 +52,17 @@ public final class WebViewProcessFix {
             System.setProperty("webview.cookies.dir", cookiesDir);
             System.setProperty("webview.database.path", dbDir);
 
+            // Important: do NOT call WebView.setDataDirectorySuffix() or CookieManager.getInstance() here.
+            // Some target apps call setDataDirectorySuffix() inside Application.onCreate(), and if Bcore
+            // initializes WebView first, the target app will crash with:
+            // "Can't set data directory suffix: WebView already initialized".
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                try {
-                    WebView.setDataDirectorySuffix(suffix);
-                    sLastSuffix = suffix;
-                    Slog.d(TAG, "setDataDirectorySuffix=" + suffix);
-                } catch (Throwable e) {
-                    Slog.w(TAG, "setDataDirectorySuffix skipped: " + e.getMessage());
-                }
-            }
-
-            // Warm up CookieManager after data dir is fixed, so WebView provider uses stable process storage.
-            try {
-                CookieManager cookieManager = CookieManager.getInstance();
-                cookieManager.setAcceptCookie(true);
-                Slog.d(TAG, "CookieManager initialized for process=" + processName);
-            } catch (Throwable e) {
-                Slog.w(TAG, "CookieManager init failed: " + e.getMessage());
+                sLastSuffix = suffix;
+                Slog.d(TAG, "prepared WebView suffix=" + suffix + " (deferred, not applied by Bcore)");
             }
 
             sInstalled = true;
-            Slog.d(TAG, "Installed stable WebView environment. pkg=" + packageName
+            Slog.d(TAG, "Prepared stable WebView environment without initializing provider. pkg=" + packageName
                     + " process=" + processName + " dir=" + baseDir);
         } catch (Throwable e) {
             Slog.e(TAG, "install failed: " + e.getMessage(), e);

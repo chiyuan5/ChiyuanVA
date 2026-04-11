@@ -32,6 +32,8 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.webkit.WebView;
 
+import com.chiyuan.va.utils.WebViewProcessFix;
+
 import java.io.File;
 import java.lang.reflect.Method;
 import java.security.Security;
