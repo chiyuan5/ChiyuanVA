@@ -63,8 +63,13 @@ public class IConnectivityManagerProxy extends BinderInvocationStub {
     }
 
     private Object invokeDirect(Method method, Object[] args) throws Throwable {
+        Object base = getBase();
+        if (base == null) {
+            // 兜底：理论上 injectHook() 后 base 不应为空；这里退回父类逻辑，避免空 receiver。
+            return super.invoke(getProxyInvocation(), method, args);
+        }
         try {
-            return method.invoke(getWho(), args);
+            return method.invoke(base, args);
         } catch (java.lang.reflect.InvocationTargetException e) {
             Throwable t = e.getTargetException();
             throw t != null ? t : e;
