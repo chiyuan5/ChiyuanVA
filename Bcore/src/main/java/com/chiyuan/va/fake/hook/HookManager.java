@@ -156,9 +156,6 @@ public class HookManager {
             addInjector(new IDevicePolicyManagerProxy());
             addInjector(new IAccountManagerProxy());
             addInjector(new IConnectivityManagerProxy());
-            // DNS resolver is intentionally not hooked here.
-            // Returning fabricated DNS results can break WebView/CDN resource loads.
-            // Prefer host/system DNS behavior instead.
                     addInjector(new IAttributionSourceProxy());
         addInjector(new IContentProviderProxy());
         addInjector(new ISettingsSystemProxy());

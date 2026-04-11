@@ -388,9 +388,7 @@ public class BActivityThread extends IBActivityThread.Stub {
                 StrictModeCompat.disableDeathOnFileUriExposure();
             }
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            WebView.setDataDirectorySuffix(getUserId() + ":" + packageName + ":" + processName);
-        }
+        WebViewProcessFix.install(packageContext, applicationInfo, getUserId(), packageName, processName);
 
         VirtualRuntime.setupRuntime(processName, applicationInfo);
 

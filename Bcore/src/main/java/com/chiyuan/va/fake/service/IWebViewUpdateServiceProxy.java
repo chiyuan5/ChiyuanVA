@@ -93,7 +93,7 @@ public class IWebViewUpdateServiceProxy extends ClassInvocationStub {
             try {
                 return method.invoke(who, args);
             } catch (Exception e) {
-                Slog.w(TAG, "WebViewUpdateService: Failed to query multi-process status", e);
+                Slog.w(TAG, "WebViewUpdateService: isMultiProcessEnabled fallback false: " + e.getMessage());
                 return false;
             }
         }
