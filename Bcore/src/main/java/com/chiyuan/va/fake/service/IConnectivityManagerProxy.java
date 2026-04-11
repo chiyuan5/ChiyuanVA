@@ -1,12 +1,15 @@
 package com.chiyuan.va.fake.service;
 
 import android.content.Context;
+import android.os.IBinder;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Network;
 import android.net.LinkProperties;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Proxy;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Array;
 import java.net.InetAddress;
@@ -30,13 +33,32 @@ import com.chiyuan.va.utils.compat.ContextCompat;
 public class IConnectivityManagerProxy extends BinderInvocationStub {
     public static final String TAG = "IConnectivityManagerProxy";
 
+    private final IBinder mOriginBinder;
+    private final Object mOriginWho;
+
     public IConnectivityManagerProxy() {
-        super(BRServiceManager.get().getService(Context.CONNECTIVITY_SERVICE));
+        this(BRServiceManager.get().getService(Context.CONNECTIVITY_SERVICE));
+    }
+
+    private IConnectivityManagerProxy(IBinder binder) {
+        super(unwrapBinder(binder));
+        mOriginBinder = unwrapBinder(binder);
+        mOriginWho = mOriginBinder != null ? BRIConnectivityManagerStub.get().asInterface(mOriginBinder) : null;
+    }
+
+    private static IBinder unwrapBinder(IBinder binder) {
+        if (binder instanceof IConnectivityManagerProxy) {
+            IBinder origin = ((IConnectivityManagerProxy) binder).mOriginBinder;
+            if (origin != null) {
+                return origin;
+            }
+        }
+        return binder;
     }
 
     @Override
     protected Object getWho() {
-        return BRIConnectivityManagerStub.get().asInterface(BRServiceManager.get().getService(Context.CONNECTIVITY_SERVICE));
+        return mOriginWho;
     }
 
     @Override
@@ -65,9 +87,31 @@ public class IConnectivityManagerProxy extends BinderInvocationStub {
     private Object invokeDirect(Method method, Object[] args) throws Throwable {
         Object base = getBase();
         if (base == null) {
-            // 兜底：理论上 injectHook() 后 base 不应为空；这里退回父类逻辑，避免空 receiver。
-            return super.invoke(getProxyInvocation(), method, args);
+            base = mOriginWho;
         }
+
+        // 某些重复初始化场景下，mBase 可能已经被污染成旧代理对象；这里主动解开一层。
+        if (base != null && Proxy.isProxyClass(base.getClass())) {
+            try {
+                InvocationHandler handler = Proxy.getInvocationHandler(base);
+                if (handler instanceof IConnectivityManagerProxy) {
+                    Object rawBase = ((IConnectivityManagerProxy) handler).getBase();
+                    if (rawBase != null && rawBase != base) {
+                        base = rawBase;
+                    }
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+
+        if (base == null) {
+            throw new IllegalStateException("Connectivity base is null for " + method.getName());
+        }
+
+        if (base == getProxyInvocation()) {
+            throw new IllegalStateException("Connectivity base loops back to proxy for " + method.getName());
+        }
+
         try {
             return method.invoke(base, args);
         } catch (java.lang.reflect.InvocationTargetException e) {

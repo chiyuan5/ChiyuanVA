@@ -100,12 +100,17 @@ public class HookManager {
     private static final HookManager sHookManager = new HookManager();
 
     private final Map<Class<?>, IInjectHook> mInjectors = new HashMap<>();
+    private volatile boolean mInitCalled = false;
 
     public static HookManager get() {
         return sHookManager;
     }
 
-    public void init() {
+    public synchronized void init() {
+        if (mInitCalled) {
+            return;
+        }
+        mInitCalled = true;
         if (ChiyuanVACore.get().isBlackProcess() || ChiyuanVACore.get().isServerProcess()) {
             addInjector(new IDisplayManagerProxy());
             addInjector(new OsStub());
