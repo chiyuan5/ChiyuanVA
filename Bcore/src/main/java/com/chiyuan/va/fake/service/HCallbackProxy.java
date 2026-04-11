@@ -34,6 +34,7 @@ import com.chiyuan.va.fake.hook.IInjectHook;
 import com.chiyuan.va.proxy.ProxyManifest;
 import com.chiyuan.va.proxy.record.ProxyActivityRecord;
 import com.chiyuan.va.utils.Slog;
+import com.chiyuan.va.utils.Reflector;
 import com.chiyuan.va.utils.compat.BuildCompat;
 
 
@@ -102,16 +103,25 @@ public class HCallbackProxy implements IInjectHook, Handler.Callback {
 
     private Object getLaunchActivityItem(Object clientTransaction) {
         List<Object> mActivityCallbacks = BRClientTransaction.get(clientTransaction).mActivityCallbacks();
-
-        if (mActivityCallbacks == null) {
-            Slog.e(TAG, "mActivityCallbacks is null for clientTransaction: " + clientTransaction);
-            return null;
+        if (mActivityCallbacks != null) {
+            for (Object obj : mActivityCallbacks) {
+                if (obj != null && BRLaunchActivityItem.getRealClass().getName().equals(obj.getClass().getCanonicalName())) {
+                    return obj;
+                }
+            }
         }
 
-        for (Object obj : mActivityCallbacks) {
-            if (BRLaunchActivityItem.getRealClass().getName().equals(obj.getClass().getCanonicalName())) {
-                return obj;
+        // Android 14+ may store items in mTransactionItems instead of mActivityCallbacks.
+        try {
+            List<Object> transactionItems = Reflector.with(clientTransaction).field("mTransactionItems").get();
+            if (transactionItems != null) {
+                for (Object obj : transactionItems) {
+                    if (obj != null && BRLaunchActivityItem.getRealClass().getName().equals(obj.getClass().getCanonicalName())) {
+                        return obj;
+                    }
+                }
             }
+        } catch (Throwable ignored) {
         }
         return null;
     }

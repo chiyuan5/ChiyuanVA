@@ -83,8 +83,7 @@ public class GuestAppContext extends ContextWrapper {
 
     @Override
     public Context getApplicationContext() {
-        Context applicationContext = getBaseContext().getApplicationContext();
-        return applicationContext != null ? applicationContext : this;
+        return this;
     }
 
     @Override
@@ -165,4 +164,15 @@ public class GuestAppContext extends ContextWrapper {
         }
         return getBaseContext().getPackageResourcePath();
     }
+
+    @Override
+    public Context createDeviceProtectedStorageContext() {
+        return this;
+    }
+
+    @Override
+    public boolean isDeviceProtectedStorage() {
+        return false;
+    }
+
 }
