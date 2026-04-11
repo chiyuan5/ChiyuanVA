@@ -30,7 +30,6 @@ import android.os.RemoteException;
 import android.os.StrictMode;
 import android.text.TextUtils;
 import android.util.Log;
-import android.net.ConnectivityManager;
 import android.webkit.WebView;
 
 import java.io.File;
@@ -390,43 +389,7 @@ public class BActivityThread extends IBActivityThread.Stub {
             }
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            try {
-                // 不能使用 ':' 字符，部分ROM的WebView实现会崩溃或缓存异常
-                String safePkg = packageName.replace('.', '_');
-                String safeProc = processName.replace('.', '_').replace(':', '_');
-                WebView.setDataDirectorySuffix("v_" + getUserId() + "_" + safePkg + "_" + safeProc);
-            } catch (Throwable e) {
-                Slog.w(TAG, "setDataDirectorySuffix failed", e);
-            }
-        }
-
-        // 将当前进程绑定到真实网络，修复 WebView 因 SELinux 阻止 netlink_route_socket
-        // 导致 Chromium 认为无网络而出现 ERR_CACHE_MISS 的问题
-        try {
-            android.net.ConnectivityManager cm = (android.net.ConnectivityManager)
-                    ChiyuanVACore.getContext().getSystemService(Context.CONNECTIVITY_SERVICE);
-            if (cm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                android.net.Network activeNetwork = cm.getActiveNetwork();
-                if (activeNetwork != null) {
-                    cm.bindProcessToNetwork(activeNetwork);
-                    Slog.d(TAG, "Bound virtual process to active network: " + activeNetwork);
-                }
-            } else if (cm != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                android.net.Network[] networks = cm.getAllNetworks();
-                if (networks != null && networks.length > 0) {
-                    ConnectivityManager.setProcessDefaultNetwork(networks[0]);
-                    Slog.d(TAG, "Set process default network (pre-M)");
-                }
-            }
-        } catch (Throwable e) {
-            Slog.w(TAG, "Failed to bind process to network", e);
-        }
-
-        // 注册持久网络回调，确保网络切换后自动重新绑定
-        try {
-            com.chiyuan.va.utils.WebViewNetworkFix.registerNetworkCallback(ChiyuanVACore.getContext());
-        } catch (Throwable e) {
-            Slog.w(TAG, "registerNetworkCallback failed", e);
+            WebView.setDataDirectorySuffix(getUserId() + ":" + packageName + ":" + processName);
         }
 
         VirtualRuntime.setupRuntime(processName, applicationInfo);
