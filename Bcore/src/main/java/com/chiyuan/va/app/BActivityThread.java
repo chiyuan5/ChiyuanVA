@@ -989,17 +989,17 @@ public class BActivityThread extends IBActivityThread.Stub {
             return;
         }
         try {
-            Reflector.on(loadedApk).field("mApplicationInfo").set(applicationInfo);
+            Reflector.with(loadedApk).field("mApplicationInfo").set(applicationInfo);
         } catch (Throwable ignored) {
         }
         try {
-            Reflector.on(loadedApk).field("mDataDir").set(applicationInfo.dataDir);
+            Reflector.with(loadedApk).field("mDataDir").set(applicationInfo.dataDir);
         } catch (Throwable ignored) {
         }
         try {
             if (!TextUtils.isEmpty(applicationInfo.dataDir)) {
-                Reflector.on(loadedApk).field("mDataDirFile").set(new File(applicationInfo.dataDir));
-                Reflector.on(loadedApk).field("mCredentialProtectedDataDirFile").set(new File(applicationInfo.dataDir));
+                Reflector.with(loadedApk).field("mDataDirFile").set(new File(applicationInfo.dataDir));
+                Reflector.with(loadedApk).field("mCredentialProtectedDataDirFile").set(new File(applicationInfo.dataDir));
             }
         } catch (Throwable ignored) {
         }
@@ -1009,7 +1009,7 @@ public class BActivityThread extends IBActivityThread.Stub {
                 deviceDir = applicationInfo.dataDir;
             }
             if (!TextUtils.isEmpty(deviceDir)) {
-                Reflector.on(loadedApk).field("mDeviceProtectedDataDirFile").set(new File(deviceDir));
+                Reflector.with(loadedApk).field("mDeviceProtectedDataDirFile").set(new File(deviceDir));
             }
         } catch (Throwable ignored) {
         }
