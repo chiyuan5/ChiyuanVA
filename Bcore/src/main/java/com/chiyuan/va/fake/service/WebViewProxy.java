@@ -59,7 +59,7 @@ public class WebViewProxy extends ClassInvocationStub {
                     
                     String packageName = context.getPackageName();
                     String userId = String.valueOf(BActivityThread.getUserId());
-                    String uniqueDataDir = context.getApplicationInfo().dataDir + "/webview_" + userId + "_" + packageName;
+                    String uniqueDataDir = context.getApplicationInfo().dataDir + "/webview_" + userId + "_" + android.os.Process.myPid();
 
                     
                     File dataDir = new File(uniqueDataDir);
@@ -199,7 +199,7 @@ public class WebViewProxy extends ClassInvocationStub {
                     Context context = ChiyuanVACore.getContext();
                     String packageName = context != null ? context.getPackageName() : "unknown";
                     String userId = String.valueOf(BActivityThread.getUserId());
-                    String uniqueSuffix = suffix + "_" + userId + "_" + packageName;
+                    String uniqueSuffix = suffix + "_" + userId + "_" + android.os.Process.myPid();
                     args[0] = uniqueSuffix;
                     Slog.d(TAG, "WebView: Using unique suffix: " + uniqueSuffix);
                 }
@@ -225,7 +225,7 @@ public class WebViewProxy extends ClassInvocationStub {
                 if (context != null) {
                     String packageName = context.getPackageName();
                     String userId = String.valueOf(BActivityThread.getUserId());
-                    String uniqueDir = context.getApplicationInfo().dataDir + "/webview_" + userId + "_" + packageName;
+                    String uniqueDir = context.getApplicationInfo().dataDir + "/webview_" + userId + "_" + android.os.Process.myPid();
                     
                     
                     File dir = new File(uniqueDir);
@@ -260,7 +260,7 @@ public class WebViewProxy extends ClassInvocationStub {
                     
                     String packageName = context.getPackageName();
                     String userId = String.valueOf(BActivityThread.getUserId());
-                    String uniqueDbPath = context.getApplicationInfo().dataDir + "/webview_db_" + userId + "_" + packageName;
+                    String uniqueDbPath = context.getApplicationInfo().dataDir + "/webview_db_" + userId + "_" + android.os.Process.myPid();
                     
                     
                     System.setProperty("webview.database.path", uniqueDbPath);

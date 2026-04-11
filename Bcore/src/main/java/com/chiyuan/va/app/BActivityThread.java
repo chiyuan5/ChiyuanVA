@@ -32,8 +32,6 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.webkit.WebView;
 
-import com.chiyuan.va.utils.WebViewProcessFix;
-
 import java.io.File;
 import java.lang.reflect.Method;
 import java.security.Security;
@@ -390,7 +388,9 @@ public class BActivityThread extends IBActivityThread.Stub {
                 StrictModeCompat.disableDeathOnFileUriExposure();
             }
         }
-        WebViewProcessFix.install(packageContext, applicationInfo, getUserId(), packageName, processName);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            WebView.setDataDirectorySuffix(getUserId() + ":" + packageName + ":" + processName);
+        }
 
         VirtualRuntime.setupRuntime(processName, applicationInfo);
 

@@ -16,7 +16,6 @@ import java.util.Map;
 
 import com.chiyuan.va.ChiyuanVACore;
 import com.chiyuan.va.app.BActivityThread;
-import com.chiyuan.va.utils.WebViewProcessFix;
 
 
 public class SocialMediaAppCrashPrevention {
@@ -124,11 +123,23 @@ public class SocialMediaAppCrashPrevention {
     
     private static void hookWebViewDatabase() {
         try {
+            
             Context context = ChiyuanVACore.getContext();
             if (context != null) {
                 String packageName = context.getPackageName();
-                String processName = packageName;
-                WebViewProcessFix.install(context, context.getApplicationInfo(), BActivityThread.getUserId(), packageName, processName);
+                String userId = String.valueOf(BActivityThread.getUserId());
+                String webViewDir = context.getApplicationInfo().dataDir + "/webview_" + userId;
+                
+                File webViewDirectory = new File(webViewDir);
+                if (!webViewDirectory.exists()) {
+                    webViewDirectory.mkdirs();
+                    Slog.d(TAG, "Created WebView directory: " + webViewDir);
+                }
+                
+                
+                System.setProperty("webview.data.dir", webViewDir);
+                System.setProperty("webview.cache.dir", webViewDir + "/cache");
+                System.setProperty("webview.cookies.dir", webViewDir + "/cookies");
             }
         } catch (Exception e) {
             Slog.w(TAG, "Could not hook WebViewDatabase: " + e.getMessage());
