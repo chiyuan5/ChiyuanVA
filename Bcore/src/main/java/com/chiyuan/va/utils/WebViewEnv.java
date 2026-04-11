@@ -6,6 +6,7 @@ import android.text.TextUtils;
 import android.webkit.WebView;
 
 import java.io.File;
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.chiyuan.va.core.env.BEnvironment;
@@ -13,6 +14,7 @@ import com.chiyuan.va.core.env.BEnvironment;
 public final class WebViewEnv {
     private static final String TAG = "WebViewEnv";
     private static final AtomicBoolean sPrepared = new AtomicBoolean(false);
+    private static final AtomicBoolean sLegacyStateCleaned = new AtomicBoolean(false);
 
     private WebViewEnv() {
     }
@@ -25,7 +27,10 @@ public final class WebViewEnv {
         if (!sPrepared.compareAndSet(false, true)) {
             return;
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        if (shouldUseDataDirectorySuffix() && sLegacyStateCleaned.compareAndSet(false, true)) {
+            clearLegacyWebViewState(packageName, userId);
+        }
+        if (shouldUseDataDirectorySuffix()) {
             String suffix = buildStableSuffix(packageName, processName, userId);
             try {
                 WebView.setDataDirectorySuffix(suffix);
@@ -62,12 +67,49 @@ public final class WebViewEnv {
         FileUtils.mkdirs(getGuestWebViewPrefsRoot(packageName, userId));
     }
 
+    public static boolean shouldUseDataDirectorySuffix() {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.P;
+    }
+
+    public static void clearLegacyWebViewState(String packageName, int userId) {
+        if (TextUtils.isEmpty(packageName)) {
+            return;
+        }
+
+        int deletedEntries = 0;
+        deletedEntries += FileUtils.deleteDir(getGuestWebViewRoot(packageName, userId));
+        deletedEntries += FileUtils.deleteDir(getGuestWebViewCacheRoot(packageName, userId));
+
+        File dbRoot = getGuestWebViewDatabaseRoot(packageName, userId);
+        deletedEntries += deleteIfExists(new File(dbRoot, "webview.db"));
+        deletedEntries += deleteIfExists(new File(dbRoot, "webviewCache.db"));
+        deletedEntries += deleteIfExists(new File(dbRoot, "webviewCookiesChromium.db"));
+
+        File prefsRoot = getGuestWebViewPrefsRoot(packageName, userId);
+        deletedEntries += deleteIfExists(new File(prefsRoot, "WebViewChromiumPrefs.xml"));
+        deletedEntries += deleteIfExists(new File(prefsRoot, "webview_preferences.xml"));
+
+        ensureGuestWebViewDirs(packageName, userId);
+        Slog.d(TAG, String.format(Locale.US,
+                "Cleared %d legacy WebView state entries for %s on Android P+", deletedEntries, packageName));
+    }
+
     public static String buildStableSuffix(String packageName, String processName, int userId) {
         String processToken = TextUtils.isEmpty(processName)
                 ? "main"
                 : Integer.toHexString(processName.hashCode());
         String raw = "u" + userId + "_" + packageName + "_" + processToken;
         return sanitize(raw);
+    }
+
+    private static int deleteIfExists(File file) {
+        if (file == null || !file.exists()) {
+            return 0;
+        }
+        if (file.isDirectory()) {
+            return FileUtils.deleteDir(file);
+        }
+        return file.delete() ? 1 : 0;
     }
 
     private static String sanitize(String raw) {
