@@ -125,11 +125,14 @@ public class HookManager {
             addInjector(new IAudioServiceProxy());
             addInjector(new ISensorPrivacyManagerProxy());
             addInjector(new ContentResolverProxy());
-            addInjector(new IWebViewUpdateServiceProxy());
+            // Disabled for WebView stability: rely on early process-level suffix configuration.
+            // addInjector(new IWebViewUpdateServiceProxy());
             addInjector(new SystemLibraryProxy());
             addInjector(new ReLinkerProxy());
-            addInjector(new WebViewProxy());
-            addInjector(new WebViewFactoryProxy());
+            // Disabled for WebView stability: avoid conflicting runtime WebView directory hooks.
+            // addInjector(new WebViewProxy());
+            // Disabled for WebView stability: avoid conflicting runtime WebView factory hooks.
+            // addInjector(new WebViewFactoryProxy());
             addInjector(new WorkManagerProxy());
             addInjector(new MediaRecorderProxy());
             addInjector(new AudioRecordProxy());

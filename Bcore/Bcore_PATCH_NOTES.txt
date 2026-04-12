@@ -1,0 +1,19 @@
+Bcore WebView stability patch
+
+Summary
+- Removed early SocialMediaAppCrashPrevention WebView initialization from ChiyuanVACore static init.
+- Added early WebView.setDataDirectorySuffix(processName) in BActivityThread.handleBindApplication() before createPackageContext().
+- Kept suffix behavior aligned with guest app expectation: main process uses default WebView directory, non-main process uses processName.
+- Disabled conflicting WebView-related injectors in HookManager:
+  - IWebViewUpdateServiceProxy
+  - WebViewProxy
+  - WebViewFactoryProxy
+
+Touched files
+- src/main/java/com/chiyuan/va/ChiyuanVACore.java
+- src/main/java/com/chiyuan/va/app/BActivityThread.java
+- src/main/java/com/chiyuan/va/fake/hook/HookManager.java
+
+Notes
+- This patch is intentionally conservative and only changes bcore.
+- SocialMediaAppCrashPrevention class remains in source, but its early initialization is skipped.
