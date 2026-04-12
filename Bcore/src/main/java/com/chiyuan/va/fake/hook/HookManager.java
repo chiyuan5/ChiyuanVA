@@ -42,6 +42,7 @@ import com.chiyuan.va.fake.service.IMediaSessionManagerProxy;
 import com.chiyuan.va.fake.service.IAudioServiceProxy;
 import com.chiyuan.va.fake.service.ISensorPrivacyManagerProxy;
 import com.chiyuan.va.fake.service.ContentResolverProxy;
+import com.chiyuan.va.fake.service.IWebViewUpdateServiceProxy;
 import com.chiyuan.va.fake.service.IMiuiSecurityManagerProxy;
 import com.chiyuan.va.fake.service.SystemLibraryProxy;
 import com.chiyuan.va.fake.service.ReLinkerProxy;
@@ -122,6 +123,7 @@ public class HookManager {
             addInjector(new IAudioServiceProxy());
             addInjector(new ISensorPrivacyManagerProxy());
             addInjector(new ContentResolverProxy());
+            addInjector(new IWebViewUpdateServiceProxy());
             addInjector(new SystemLibraryProxy());
             addInjector(new ReLinkerProxy());
             addInjector(new WorkManagerProxy());
