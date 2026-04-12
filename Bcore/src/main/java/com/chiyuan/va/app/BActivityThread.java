@@ -76,6 +76,7 @@ import com.chiyuan.va.fake.delegate.ContentProviderDelegate;
 
 import com.chiyuan.va.fake.hook.HookManager;
 import com.chiyuan.va.fake.service.HCallbackProxy;
+import com.chiyuan.va.utils.FileUtils;
 import com.chiyuan.va.utils.Reflector;
 import com.chiyuan.va.utils.SafeContextWrapper;
 import com.chiyuan.va.utils.GlobalContextWrapper;
@@ -174,10 +175,11 @@ public class BActivityThread extends IBActivityThread.Stub {
     public void initProcess(AppConfig appConfig) {
         synchronized (mConfigLock) {
             if (this.mAppConfig != null && !this.mAppConfig.packageName.equals(appConfig.packageName)) {
-                
+
                 throw new RuntimeException("reject init process: " + appConfig.processName + ", this process is : " + this.mAppConfig.processName);
             }
             this.mAppConfig = appConfig;
+            prepareWebViewStorage(appConfig.packageName, appConfig.processName, appConfig.userId);
             IBinder iBinder = asBinder();
             try {
                 iBinder.linkToDeath(new DeathRecipient() {
@@ -1016,12 +1018,30 @@ public class BActivityThread extends IBActivityThread.Stub {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
             return;
         }
+        prepareWebViewStorage(packageName, processName, getUserId());
         String suffix = getUserId() + ":" + packageName + ":" + processName;
         try {
             WebView.setDataDirectorySuffix(suffix);
             Slog.d(TAG, "Initialized WebView data directory suffix: " + suffix);
         } catch (Throwable t) {
             Slog.w(TAG, "Failed to initialize WebView data directory suffix: " + suffix + " - " + t.getMessage());
+        }
+    }
+
+    private void prepareWebViewStorage(String packageName, String processName, int userId) {
+        try {
+            FileUtils.mkdirs(BEnvironment.getDataDir(packageName, userId));
+            FileUtils.mkdirs(BEnvironment.getDeDataDir(packageName, userId));
+            FileUtils.mkdirs(BEnvironment.getDataCacheDir(packageName, userId));
+            FileUtils.mkdirs(new File(BEnvironment.getDataDir(packageName, userId), "app_webview"));
+            FileUtils.mkdirs(new File(BEnvironment.getDataDir(packageName, userId), "app_webview/Default"));
+            FileUtils.mkdirs(new File(BEnvironment.getDataCacheDir(packageName, userId), "WebView"));
+            FileUtils.mkdirs(new File(BEnvironment.getDeDataDir(packageName, userId), "app_webview"));
+            FileUtils.mkdirs(new File(BEnvironment.getDeDataDir(packageName, userId), "app_webview/Default"));
+            FileUtils.mkdirs(new File(BEnvironment.getDeDataDir(packageName, userId), "cache"));
+            Slog.d(TAG, "Prepared WebView storage for process: " + processName + ", package: " + packageName + ", user: " + userId);
+        } catch (Throwable t) {
+            Slog.w(TAG, "Failed to prepare WebView storage for process: " + processName + " - " + t.getMessage());
         }
     }
 
