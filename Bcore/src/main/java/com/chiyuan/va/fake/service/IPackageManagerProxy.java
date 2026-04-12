@@ -357,6 +357,39 @@ public class IPackageManagerProxy extends BinderInvocationStub {
             }
             return null;
         }
+
+        private ApplicationInfo createLegacyLauncherApplicationInfo(int flags) {
+            PackageManager packageManager = ChiyuanVACore.getPackageManager();
+            for (String candidate : LAUNCHER_CANDIDATES) {
+                try {
+                    ApplicationInfo baseInfo = packageManager.getApplicationInfo(candidate, flags);
+                    ApplicationInfo aliasInfo = new ApplicationInfo(baseInfo);
+                    aliasInfo.packageName = LEGACY_LAUNCHER_PKG;
+                    aliasInfo.processName = LEGACY_LAUNCHER_PKG;
+                    aliasInfo.name = LEGACY_LAUNCHER_PKG;
+                    Slog.d(TAG, "Providing legacy launcher application alias via " + candidate);
+                    return aliasInfo;
+                } catch (PackageManager.NameNotFoundException ignored) {
+                }
+            }
+
+            try {
+                Intent homeIntent = new Intent(Intent.ACTION_MAIN);
+                homeIntent.addCategory(Intent.CATEGORY_HOME);
+                ResolveInfo resolveInfo = packageManager.resolveActivity(homeIntent, 0);
+                if (resolveInfo != null && resolveInfo.activityInfo != null && resolveInfo.activityInfo.applicationInfo != null) {
+                    ApplicationInfo aliasInfo = new ApplicationInfo(resolveInfo.activityInfo.applicationInfo);
+                    aliasInfo.packageName = LEGACY_LAUNCHER_PKG;
+                    aliasInfo.processName = LEGACY_LAUNCHER_PKG;
+                    aliasInfo.name = LEGACY_LAUNCHER_PKG;
+                    Slog.d(TAG, "Providing legacy launcher application alias via resolved HOME activity");
+                    return aliasInfo;
+                }
+            } catch (Throwable t) {
+                Slog.w(TAG, "Failed resolving HOME activity for launcher application alias: " + t.getMessage());
+            }
+            return null;
+        }
     }
 
     @ProxyMethod("queryContentProviders")
