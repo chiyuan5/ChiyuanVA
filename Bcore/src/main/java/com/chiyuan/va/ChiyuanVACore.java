@@ -92,9 +92,8 @@ public class ChiyuanVACore extends ClientConfiguration {
             StackTraceFilter.install();
             Slog.d(TAG, "Stack trace filter installed at class loading time");
             
-            // Avoid touching android.webkit too early. WebView directory selection must be
-            // configured by BActivityThread before any android.webkit usage in the virtual app process.
-            Slog.d(TAG, "Skip early SocialMediaAppCrashPrevention initialization to avoid premature WebView setup");
+            SocialMediaAppCrashPrevention.initialize();
+            Slog.d(TAG, "Social media app crash prevention initialized without custom WebView directory overrides");
             
             DexCrashPrevention.initialize();
             Slog.d(TAG, "DEX crash prevention initialized at class loading time");

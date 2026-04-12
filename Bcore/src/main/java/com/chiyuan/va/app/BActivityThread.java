@@ -331,27 +331,6 @@ public class BActivityThread extends IBActivityThread.Stub {
     }
     
     
-    private void configureWebViewEarly(String packageName, String processName) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-            return;
-        }
-        if (TextUtils.isEmpty(packageName) || TextUtils.isEmpty(processName)) {
-            return;
-        }
-        if (TextUtils.equals(packageName, processName)) {
-            Slog.d(TAG, "WebView: main process, keep default data directory");
-            return;
-        }
-        try {
-            WebView.setDataDirectorySuffix(processName);
-            Slog.d(TAG, "WebView: early setDataDirectorySuffix=" + processName);
-        } catch (IllegalStateException e) {
-            Slog.w(TAG, "WebView: setDataDirectorySuffix too late; android.webkit was already touched", e);
-        } catch (Throwable e) {
-            Slog.w(TAG, "WebView: setDataDirectorySuffix failed", e);
-        }
-    }
-
     private Object createBindApplicationData(String packageName, String processName) {
         try {
             
@@ -393,8 +372,6 @@ public class BActivityThread extends IBActivityThread.Stub {
 
         Object boundApplication = BRActivityThread.get(ChiyuanVACore.mainThread()).mBoundApplication();
 
-        configureWebViewEarly(packageName, processName);
-
         Context packageContext = createPackageContext(applicationInfo);
         Object loadedApk = BRContextImpl.get(packageContext).mPackageInfo();
         BRLoadedApk.get(loadedApk)._set_mSecurityViolation(false);
@@ -411,6 +388,8 @@ public class BActivityThread extends IBActivityThread.Stub {
                 StrictModeCompat.disableDeathOnFileUriExposure();
             }
         }
+        initializeWebViewDataDirectory(packageName, processName);
+
         VirtualRuntime.setupRuntime(processName, applicationInfo);
 
         BRVMRuntime.get(BRVMRuntime.get().getRuntime()).setTargetSdkVersion(applicationInfo.targetSdkVersion);
@@ -1030,6 +1009,19 @@ public class BActivityThread extends IBActivityThread.Stub {
         } finally {
             Binder.restoreCallingIdentity(origId);
             ContentProviderDelegate.init();
+        }
+    }
+
+    private void initializeWebViewDataDirectory(String packageName, String processName) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            return;
+        }
+        String suffix = getUserId() + ":" + packageName + ":" + processName;
+        try {
+            WebView.setDataDirectorySuffix(suffix);
+            Slog.d(TAG, "Initialized WebView data directory suffix: " + suffix);
+        } catch (Throwable t) {
+            Slog.w(TAG, "Failed to initialize WebView data directory suffix: " + suffix + " - " + t.getMessage());
         }
     }
 
