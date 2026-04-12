@@ -423,7 +423,12 @@ public class BActivityThread extends IBActivityThread.Stub {
 
         // 自动启用 proc 伪造（反GG修改器虚拟环境检测）
         try {
-            NativeCore.startProcSpoof(packageName);
+            boolean isWebViewProcess = processName != null && processName.toLowerCase().contains("webview");
+            if (!isWebViewProcess) {
+                NativeCore.startProcSpoof(packageName);
+            } else {
+                Slog.d(TAG, "Skip proc spoof for WebView process: " + processName);
+            }
         } catch (Throwable ignored) {
         }
 

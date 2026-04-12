@@ -451,8 +451,6 @@ void antidetection_enable_proc_spoof(JNIEnv *env, jclass clazz,
 // ==================== 自动初始化（库加载时） ====================
 
 __attribute__((constructor)) void install_antidetection_hooks() {
-    LOGD("Installing anti-detection hooks...");
     g_self_pid = getpid();
-    install_file_hooks();
-    LOGD("Anti-detection hooks installed, pid=%d", g_self_pid);
+    LOGD("Anti-detection auto hooks disabled, pid=%d", g_self_pid);
 }
