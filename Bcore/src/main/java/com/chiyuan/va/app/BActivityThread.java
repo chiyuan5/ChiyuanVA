@@ -66,6 +66,7 @@ import com.chiyuan.va.core.CrashHandler;
 import com.chiyuan.va.core.IBActivityThread;
 import com.chiyuan.va.core.IOCore;
 import com.chiyuan.va.core.NativeCore;
+import com.chiyuan.va.core.env.BEnvironment;
 import com.chiyuan.va.core.env.VirtualRuntime;
 import com.chiyuan.va.core.system.user.BUserHandle;
 import com.chiyuan.va.entity.AppConfig;
