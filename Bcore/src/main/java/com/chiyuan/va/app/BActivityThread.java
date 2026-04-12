@@ -93,6 +93,7 @@ public class BActivityThread extends IBActivityThread.Stub {
     public static final String TAG = "CVA_ActivityThread";
 
     private static BActivityThread sBActivityThread;
+    private static volatile String sInitializedWebViewSuffix;
     private AppBindData mBoundApplication;
     private Application mInitialApplication;
     private AppConfig mAppConfig;
@@ -181,6 +182,7 @@ public class BActivityThread extends IBActivityThread.Stub {
             }
             this.mAppConfig = appConfig;
             prepareWebViewStorage(appConfig.packageName, appConfig.processName, appConfig.userId);
+            initializeWebViewDataDirectory(appConfig.packageName, appConfig.processName, appConfig.userId);
             IBinder iBinder = asBinder();
             try {
                 iBinder.linkToDeath(new DeathRecipient() {
@@ -1016,13 +1018,21 @@ public class BActivityThread extends IBActivityThread.Stub {
     }
 
     private void initializeWebViewDataDirectory(String packageName, String processName) {
+        initializeWebViewDataDirectory(packageName, processName, getUserId());
+    }
+
+    private void initializeWebViewDataDirectory(String packageName, String processName, int userId) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
             return;
         }
-        prepareWebViewStorage(packageName, processName, getUserId());
-        String suffix = getUserId() + ":" + packageName + ":" + processName;
+        prepareWebViewStorage(packageName, processName, userId);
+        String suffix = userId + ":" + packageName + ":" + processName;
+        if (suffix.equals(sInitializedWebViewSuffix)) {
+            return;
+        }
         try {
             WebView.setDataDirectorySuffix(suffix);
+            sInitializedWebViewSuffix = suffix;
             Slog.d(TAG, "Initialized WebView data directory suffix: " + suffix);
         } catch (Throwable t) {
             Slog.w(TAG, "Failed to initialize WebView data directory suffix: " + suffix + " - " + t.getMessage());
