@@ -40,6 +40,13 @@ import com.chiyuan.va.utils.compat.ParceledListSliceCompat;
 
 public class IPackageManagerProxy extends BinderInvocationStub {
     public static final String TAG = "PackageManagerStub";
+    private static final String LEGACY_LAUNCHER_PKG = "com.android.launcher";
+    private static final String[] LAUNCHER_CANDIDATES = {
+            "com.android.launcher3",
+            "com.oppo.launcher",
+            "com.heytap.launcher",
+            "com.coloros.launcher"
+    };
 
     public IPackageManagerProxy() {
         super(BRActivityThread.get().sPackageManager().asBinder());
@@ -132,12 +139,18 @@ public class IPackageManagerProxy extends BinderInvocationStub {
         protected Object hook(Object who, Method method, Object[] args) throws Throwable {
             String packageName = (String) args[0];
             int flags = MethodParameterUtils.toInt(args[1]);
-            
-            
+
+            if (LEGACY_LAUNCHER_PKG.equals(packageName)) {
+                PackageInfo launcherInfo = createLegacyLauncherPackageInfo(flags);
+                if (launcherInfo != null) {
+                    return launcherInfo;
+                }
+            }
+
             if ("com.android.vending".equals(packageName)) {
                 return createFakeGooglePlayServicesPackageInfo();
             }
-            
+
             PackageInfo packageInfo = ChiyuanVACore.getBPackageManager().getPackageInfo(packageName, flags, ChiyuanVACore.getUserId());
             if (packageInfo != null) {
                 
@@ -165,16 +178,62 @@ public class IPackageManagerProxy extends BinderInvocationStub {
             packageInfo.packageName = "com.android.vending";
             packageInfo.versionName = "33.8.16-21";
             packageInfo.versionCode = 83381621;
-            
+
             ApplicationInfo appInfo = new ApplicationInfo();
             appInfo.packageName = "com.android.vending";
             appInfo.name = "Google Play Store";
             appInfo.flags = ApplicationInfo.FLAG_SYSTEM;
-            appInfo.uid = 10001; 
+            appInfo.uid = 10001;
             packageInfo.applicationInfo = appInfo;
-            
+
             Slog.d(TAG, "GetPackageInfo: Providing fake Google Play Services info");
             return packageInfo;
+        }
+
+        private PackageInfo createLegacyLauncherPackageInfo(int flags) {
+            ApplicationInfo applicationInfo = createLegacyLauncherApplicationInfo(flags);
+            if (applicationInfo == null) {
+                return null;
+            }
+            PackageInfo packageInfo = new PackageInfo();
+            packageInfo.packageName = LEGACY_LAUNCHER_PKG;
+            packageInfo.versionName = "1.0";
+            packageInfo.versionCode = 1;
+            packageInfo.applicationInfo = applicationInfo;
+            return packageInfo;
+        }
+
+        private ApplicationInfo createLegacyLauncherApplicationInfo(int flags) {
+            PackageManager packageManager = ChiyuanVACore.getPackageManager();
+            for (String candidate : LAUNCHER_CANDIDATES) {
+                try {
+                    ApplicationInfo baseInfo = packageManager.getApplicationInfo(candidate, flags);
+                    ApplicationInfo aliasInfo = new ApplicationInfo(baseInfo);
+                    aliasInfo.packageName = LEGACY_LAUNCHER_PKG;
+                    aliasInfo.processName = LEGACY_LAUNCHER_PKG;
+                    aliasInfo.name = LEGACY_LAUNCHER_PKG;
+                    Slog.d(TAG, "Providing legacy launcher alias via " + candidate);
+                    return aliasInfo;
+                } catch (PackageManager.NameNotFoundException ignored) {
+                }
+            }
+
+            try {
+                Intent homeIntent = new Intent(Intent.ACTION_MAIN);
+                homeIntent.addCategory(Intent.CATEGORY_HOME);
+                ResolveInfo resolveInfo = packageManager.resolveActivity(homeIntent, 0);
+                if (resolveInfo != null && resolveInfo.activityInfo != null && resolveInfo.activityInfo.applicationInfo != null) {
+                    ApplicationInfo aliasInfo = new ApplicationInfo(resolveInfo.activityInfo.applicationInfo);
+                    aliasInfo.packageName = LEGACY_LAUNCHER_PKG;
+                    aliasInfo.processName = LEGACY_LAUNCHER_PKG;
+                    aliasInfo.name = LEGACY_LAUNCHER_PKG;
+                    Slog.d(TAG, "Providing legacy launcher alias via resolved HOME activity");
+                    return aliasInfo;
+                }
+            } catch (Throwable t) {
+                Slog.w(TAG, "Failed resolving HOME activity for launcher alias: " + t.getMessage());
+            }
+            return null;
         }
     }
 
@@ -282,7 +341,12 @@ public class IPackageManagerProxy extends BinderInvocationStub {
 
             int flags = MethodParameterUtils.toInt(args[1]);
 
-
+            if (LEGACY_LAUNCHER_PKG.equals(packageName)) {
+                ApplicationInfo launcherInfo = createLegacyLauncherApplicationInfo(flags);
+                if (launcherInfo != null) {
+                    return launcherInfo;
+                }
+            }
 
             ApplicationInfo applicationInfo = ChiyuanVACore.getBPackageManager().getApplicationInfo(packageName, flags, ChiyuanVACore.getUserId());
             if (applicationInfo != null) {
