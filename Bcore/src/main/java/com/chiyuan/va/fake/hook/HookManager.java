@@ -123,7 +123,6 @@ public class HookManager {
             addInjector(new IAudioServiceProxy());
             addInjector(new ISensorPrivacyManagerProxy());
             addInjector(new ContentResolverProxy());
-            addInjector(new IWebViewUpdateServiceProxy());
             addInjector(new SystemLibraryProxy());
             addInjector(new ReLinkerProxy());
             addInjector(new WorkManagerProxy());
@@ -152,8 +151,7 @@ public class HookManager {
             addInjector(new IDevicePolicyManagerProxy());
             addInjector(new IAccountManagerProxy());
             addInjector(new IConnectivityManagerProxy());
-            addInjector(new IDnsResolverProxy());
-                    addInjector(new IAttributionSourceProxy());
+            addInjector(new IAttributionSourceProxy());
         addInjector(new IContentProviderProxy());
         addInjector(new ISettingsSystemProxy());
         addInjector(new ISystemSensorManagerProxy());
