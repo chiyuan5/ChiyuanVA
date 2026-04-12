@@ -86,13 +86,7 @@ public class IPackageManagerProxy extends BinderInvocationStub {
         super.onBindMethod();
         addMethodHook(new ValueMethodProxy("addOnPermissionsChangeListener", 0));
         addMethodHook(new ValueMethodProxy("removeOnPermissionsChangeListener", 0));
-        addMethodHook(new SimpleAudioPermissionHook());
-        addMethodHook(new CheckSelfPermission());
-        addMethodHook(new ShouldShowRequestPermissionRationale());
-        addMethodHook(new RequestPermissions());
-        addMethodHook(new DisableIconLoading());
-        addMethodHook(new SetSplashScreenTheme());
-        addMethodHook(new XiaomiSecurityBypass());
+        addMethodHook(new PkgMethodProxy("shouldShowRequestPermissionRationale"));
     }
 
     @ProxyMethod("resolveIntent")
