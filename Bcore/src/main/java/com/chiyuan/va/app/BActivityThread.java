@@ -69,10 +69,8 @@ import com.chiyuan.va.core.env.VirtualRuntime;
 import com.chiyuan.va.core.system.user.BUserHandle;
 import com.chiyuan.va.entity.AppConfig;
 import com.chiyuan.va.entity.am.ReceiverData;
-import com.chiyuan.va.entity.pm.InstalledModule;
 import com.chiyuan.va.fake.delegate.AppInstrumentation;
 import com.chiyuan.va.fake.delegate.ContentProviderDelegate;
-import com.chiyuan.va.fake.frameworks.BXposedManager;
 import com.chiyuan.va.fake.hook.HookManager;
 import com.chiyuan.va.fake.service.HCallbackProxy;
 import com.chiyuan.va.utils.Reflector;
@@ -1048,40 +1046,6 @@ public class BActivityThread extends IBActivityThread.Stub {
         }
     }
 
-    public void loadXposed(Context context) {
-        String vPackageName = getAppPackageName();
-        String vProcessName = getAppProcessName();
-        if (!TextUtils.isEmpty(vPackageName) && !TextUtils.isEmpty(vProcessName) && BXposedManager.get().isXPEnable()) {
-            assert vPackageName != null;
-            assert vProcessName != null;
-
-            boolean isFirstApplication = vPackageName.equals(vProcessName);
-
-            List<InstalledModule> installedModules = BXposedManager.get().getInstalledModules();
-            for (InstalledModule installedModule : installedModules) {
-                if (!installedModule.enable) {
-                    continue;
-                }
-                try {
-                    // Remove all PineXposed.loadModule and PineXposed.onPackageLoad calls
-                } catch (Throwable e) {
-                    String msg = "Failed to load Xposed module: " + installedModule.getApplication().packageName
-                               + " (" + installedModule.getApplication().sourceDir + ")\n"
-                               + android.util.Log.getStackTraceString(e);
-                    android.util.Log.e("BlackBoxXposed", msg);
-                    // Optionally, collect errors for UI display
-                    // XposedErrorLogger.logModuleError(installedModule.getApplication().packageName, msg);
-                }
-            }
-            try {
-                // Remove all PineXposed.onPackageLoad calls
-            } catch (Throwable ignored) {
-            }
-        }
-        if (ChiyuanVACore.get().isHideXposed()) {
-            NativeCore.hideXposed();
-        }
-    }
 
     @Override
     public IBinder getActivityThread() {
