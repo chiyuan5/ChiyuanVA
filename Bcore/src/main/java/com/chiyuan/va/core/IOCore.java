@@ -117,11 +117,8 @@ public class IOCore {
 
             rule.put(String.format("/data/data/%s", packageName), packageInfo.dataDir);
             rule.put(String.format("/data/user/%d/%s", systemUserId, packageName), packageInfo.dataDir);
-            rule.put(String.format("/data/user_de/%d/%s", systemUserId, packageName), packageInfo.deviceProtectedDataDir);
-            rule.put(String.format("/data_mirror/data_ce/null/%d/%s", systemUserId, packageName), packageInfo.dataDir);
-            rule.put(String.format("/data_mirror/data_de/null/%d/%s", systemUserId, packageName), packageInfo.deviceProtectedDataDir);
 
-
+            
             File profilesRoot = new File(BEnvironment.getVirtualRoot(), "profiles");
             FileUtils.mkdirs(profilesRoot.getAbsolutePath());
             

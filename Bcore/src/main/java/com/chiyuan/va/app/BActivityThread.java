@@ -47,7 +47,6 @@ import black.android.app.BRActivityManagerNative;
 import black.android.app.BRActivityThread;
 import black.android.app.BRActivityThreadActivityClientRecord;
 import black.android.app.BRActivityThreadAppBindData;
-import black.android.app.BRActivityThreadNMR1;
 import black.android.app.BRActivityThreadQ;
 import black.android.app.BRContextImpl;
 import black.android.app.BRLoadedApk;
@@ -66,18 +65,16 @@ import com.chiyuan.va.core.CrashHandler;
 import com.chiyuan.va.core.IBActivityThread;
 import com.chiyuan.va.core.IOCore;
 import com.chiyuan.va.core.NativeCore;
-import com.chiyuan.va.core.env.BEnvironment;
 import com.chiyuan.va.core.env.VirtualRuntime;
 import com.chiyuan.va.core.system.user.BUserHandle;
 import com.chiyuan.va.entity.AppConfig;
 import com.chiyuan.va.entity.am.ReceiverData;
-
+import com.chiyuan.va.entity.pm.InstalledModule;
 import com.chiyuan.va.fake.delegate.AppInstrumentation;
 import com.chiyuan.va.fake.delegate.ContentProviderDelegate;
-
+import com.chiyuan.va.fake.frameworks.BXposedManager;
 import com.chiyuan.va.fake.hook.HookManager;
 import com.chiyuan.va.fake.service.HCallbackProxy;
-import com.chiyuan.va.utils.FileUtils;
 import com.chiyuan.va.utils.Reflector;
 import com.chiyuan.va.utils.SafeContextWrapper;
 import com.chiyuan.va.utils.GlobalContextWrapper;
@@ -88,12 +85,18 @@ import com.chiyuan.va.utils.compat.ContextCompat;
 import com.chiyuan.va.utils.compat.StrictModeCompat;
 import com.chiyuan.va.core.system.JarManager;
 
-
+/**
+ * updated by alex5402 on 3/31/21.
+ * * ∧＿∧
+ * (`･ω･∥
+ * 丶　つ０
+ * しーＪ
+ * TFNQw5HgWUS33Ke1eNmSFTwoQySGU7XNsK (USDT TRC20)
+ */
 public class BActivityThread extends IBActivityThread.Stub {
     public static final String TAG = "CVA_ActivityThread";
 
     private static BActivityThread sBActivityThread;
-    private static volatile String sInitializedWebViewSuffix;
     private AppBindData mBoundApplication;
     private Application mInitialApplication;
     private AppConfig mAppConfig;
@@ -177,12 +180,10 @@ public class BActivityThread extends IBActivityThread.Stub {
     public void initProcess(AppConfig appConfig) {
         synchronized (mConfigLock) {
             if (this.mAppConfig != null && !this.mAppConfig.packageName.equals(appConfig.packageName)) {
-
+                // 该进程已被attach
                 throw new RuntimeException("reject init process: " + appConfig.processName + ", this process is : " + this.mAppConfig.processName);
             }
             this.mAppConfig = appConfig;
-            prepareWebViewStorage(appConfig.packageName, appConfig.processName, appConfig.userId);
-            initializeWebViewDataDirectory(appConfig.packageName, appConfig.processName, appConfig.userId);
             IBinder iBinder = asBinder();
             try {
                 iBinder.linkToDeath(new DeathRecipient() {
@@ -216,7 +217,7 @@ public class BActivityThread extends IBActivityThread.Stub {
         try {
             service = (Service) classLoader.loadClass(serviceInfo.name).newInstance();
         } catch (ClassNotFoundException e) {
-            
+            // Handle missing Google Play Services classes gracefully
             if (serviceInfo.name.contains("google.android.gms") || 
                 serviceInfo.name.contains("google.android.location")) {
                 Slog.w(TAG, "Google Play Services class not found, skipping: " + serviceInfo.name);
@@ -251,7 +252,7 @@ public class BActivityThread extends IBActivityThread.Stub {
             service.onCreate();
             return service;
         } catch (Exception e) {
-            
+            // Handle service creation errors gracefully
             if (serviceInfo.name.contains("google.android.gms") || 
                 serviceInfo.name.contains("google.android.location")) {
                 Slog.w(TAG, "Google Play Services service creation failed, skipping: " + serviceInfo.name);
@@ -271,7 +272,7 @@ public class BActivityThread extends IBActivityThread.Stub {
         try {
             service = (JobService) classLoader.loadClass(serviceInfo.name).newInstance();
         } catch (ClassNotFoundException e) {
-            
+            // Handle missing Google Play Services classes gracefully
             if (serviceInfo.name.contains("google.android.gms") || 
                 serviceInfo.name.contains("google.android.location")) {
                 Slog.w(TAG, "Google Play Services JobService class not found, skipping: " + serviceInfo.name);
@@ -307,7 +308,7 @@ public class BActivityThread extends IBActivityThread.Stub {
             service.onBind(null);
             return service;
         } catch (Exception e) {
-            
+            // Handle JobService creation errors gracefully
             if (serviceInfo.name.contains("google.android.gms") || 
                 serviceInfo.name.contains("google.android.location")) {
                 Slog.w(TAG, "Google Play Services JobService creation failed, skipping: " + serviceInfo.name);
@@ -322,28 +323,30 @@ public class BActivityThread extends IBActivityThread.Stub {
         if (Looper.myLooper() != Looper.getMainLooper()) {
             final ConditionVariable conditionVariable = new ConditionVariable();
             ChiyuanVACore.get().getHandler().post(() -> {
-                
+                // Create a minimal data object for the new handleBindApplication method
                 Object bindData = createBindApplicationData(packageName, processName);
                 handleBindApplication(packageName, processName);
                 conditionVariable.open();
             });
             conditionVariable.block();
         } else {
-            
+            // Create a minimal data object for the new handleBindApplication method
             Object bindData = createBindApplicationData(packageName, processName);
             handleBindApplication(packageName, processName);
         }
     }
     
-    
+    /**
+     * Create a minimal bind application data object
+     */
     private Object createBindApplicationData(String packageName, String processName) {
         try {
-            
+            // Get package info to create application info
             PackageInfo packageInfo = ChiyuanVACore.getBPackageManager().getPackageInfo(packageName, PackageManager.GET_PROVIDERS, getUserId());
             ApplicationInfo applicationInfo = packageInfo.applicationInfo;
             
-            
-            
+            // Create a simple data object that can be used by the new handleBindApplication method
+            // This is a simplified approach - in a real implementation you'd create the proper data structure
             return new Object() {
                 public ApplicationInfo getInfo() { return applicationInfo; }
                 public List<ProviderInfo> getProviders() { 
@@ -352,7 +355,7 @@ public class BActivityThread extends IBActivityThread.Stub {
             };
         } catch (Exception e) {
             Slog.e(TAG, "Error creating bind application data", e);
-            
+            // Return a minimal fallback object
             return new Object() {
                 public ApplicationInfo getInfo() { return null; }
                 public List<ProviderInfo> getProviders() { return new ArrayList<>(); }
@@ -380,20 +383,16 @@ public class BActivityThread extends IBActivityThread.Stub {
         Context packageContext = createPackageContext(applicationInfo);
         Object loadedApk = BRContextImpl.get(packageContext).mPackageInfo();
         BRLoadedApk.get(loadedApk)._set_mSecurityViolation(false);
-        
+        // fix applicationInfo
         BRLoadedApk.get(loadedApk)._set_mApplicationInfo(applicationInfo);
 
         int targetSdkVersion = applicationInfo.targetSdkVersion;
-        if (targetSdkVersion < Build.VERSION_CODES.GINGERBREAD) {
-            StrictMode.ThreadPolicy newPolicy = new StrictMode.ThreadPolicy.Builder(StrictMode.getThreadPolicy()).permitNetwork().build();
-            StrictMode.setThreadPolicy(newPolicy);
+        // Disable FileUriExposure death for apps targeting < N (always available on API 29+)
+        if (targetSdkVersion < Build.VERSION_CODES.N) {
+            StrictModeCompat.disableDeathOnFileUriExposure();
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            if (targetSdkVersion < Build.VERSION_CODES.N) {
-                StrictModeCompat.disableDeathOnFileUriExposure();
-            }
-        }
-        initializeWebViewDataDirectory(packageName, processName);
+        // Set WebView data directory suffix (always available on API 29+)
+        WebView.setDataDirectorySuffix(getUserId() + ":" + packageName + ":" + processName);
 
         VirtualRuntime.setupRuntime(processName, applicationInfo);
 
@@ -421,18 +420,7 @@ public class BActivityThread extends IBActivityThread.Stub {
 
         mBoundApplication = bindData;
 
-        // 自动启用 proc 伪造（反GG修改器虚拟环境检测）
-        try {
-            boolean isWebViewProcess = processName != null && processName.toLowerCase().contains("webview");
-            if (!isWebViewProcess) {
-                NativeCore.startProcSpoof(packageName);
-            } else {
-                Slog.d(TAG, "Skip proc spoof for WebView process: " + processName);
-            }
-        } catch (Throwable ignored) {
-        }
-
-        
+        //ssl适配
         if (BRNetworkSecurityConfigProvider.getRealClass() != null) {
             Security.removeProvider("AndroidNSSP");
             BRNetworkSecurityConfigProvider.get().install(packageContext);
@@ -441,7 +429,7 @@ public class BActivityThread extends IBActivityThread.Stub {
         try {
             onBeforeCreateApplication(packageName, processName, packageContext);
             
-            
+            // Try to create the application with better error handling
             try {
                 application = BRLoadedApk.get(loadedApk).makeApplication(false, null);
             } catch (Exception makeAppException) {
@@ -449,22 +437,22 @@ public class BActivityThread extends IBActivityThread.Stub {
                 application = null;
             }
             
-            
+            // If application is still null, try alternative approaches
             if (application == null) {
                 Slog.w(TAG, "makeApplication returned null, attempting fallback creation");
                 
-                
+                // Try with different parameters
                 try {
                     application = BRLoadedApk.get(loadedApk).makeApplication(true, null);
                 } catch (Exception e) {
                     Slog.e(TAG, "Fallback makeApplication also failed", e);
                 }
                 
-                
+                // If still null, try to create a minimal application context
                 if (application == null) {
                     Slog.w(TAG, "Creating minimal application context as fallback");
                     try {
-                        
+                        // Create a minimal application object or use the package context
                         application = (Application) packageContext;
                         if (application == null) {
                             Slog.e(TAG, "Even package context is null, this is critical");
@@ -499,19 +487,21 @@ public class BActivityThread extends IBActivityThread.Stub {
         }
     }
     
-    
+    /**
+     * Initialize JAR environment for DEX loading
+     */
     private void initializeJarEnvironment() {
         try {
             Slog.d(TAG, "Initializing JAR environment for DEX loading");
             
-            
+            // Initialize JarManager
             JarManager jarManager = JarManager.getInstance();
             if (!jarManager.isReady()) {
                 Slog.d(TAG, "JarManager not ready, initializing synchronously");
                 jarManager.initializeSync();
             }
             
-            
+            // Verify empty.jar is available
             File emptyJar = jarManager.getEmptyJar();
             if (emptyJar == null || !emptyJar.exists()) {
                 Slog.w(TAG, "Empty JAR not available, attempting to recreate");
@@ -531,10 +521,12 @@ public class BActivityThread extends IBActivityThread.Stub {
         }
     }
     
-    
+    /**
+     * Create application with enhanced error handling and fallback mechanisms
+     */
     private Application createApplicationWithFallback(android.content.pm.ApplicationInfo appInfo) {
         try {
-            
+            // First attempt: Try to create application normally
             Application application = createApplication(appInfo);
             if (application != null) {
                 Slog.d(TAG, "Application created successfully: " + appInfo.className);
@@ -545,7 +537,7 @@ public class BActivityThread extends IBActivityThread.Stub {
         }
         
         try {
-            
+            // Second attempt: Try with different class loader
             Slog.d(TAG, "Attempting fallback application creation");
             ClassLoader classLoader = getClassLoader(appInfo);
             if (classLoader == null) {
@@ -556,7 +548,7 @@ public class BActivityThread extends IBActivityThread.Stub {
             Class<?> appClass = classLoader.loadClass(appInfo.className);
             Application application = (Application) appClass.newInstance();
             
-            
+            // Ensure the application has a proper base context
             ensureApplicationBaseContext(application, appInfo);
             
             Slog.d(TAG, "Fallback application creation successful");
@@ -565,7 +557,7 @@ public class BActivityThread extends IBActivityThread.Stub {
         } catch (Exception e) {
             Slog.e(TAG, "Fallback application creation failed: " + e.getMessage());
             
-            
+            // Third attempt: Create a minimal application wrapper
             try {
                 Slog.d(TAG, "Creating minimal application wrapper");
                 Application wrapper = new Application() {
@@ -576,7 +568,7 @@ public class BActivityThread extends IBActivityThread.Stub {
                     }
                 };
                 
-                
+                // Ensure the minimal application has a proper base context
                 ensureApplicationBaseContext(wrapper, appInfo);
                 
                 return wrapper;
@@ -587,7 +579,9 @@ public class BActivityThread extends IBActivityThread.Stub {
         }
     }
     
-    
+    /**
+     * Install content providers with enhanced error handling
+     */
     private void installContentProvidersWithFallback(Application application, Object data) {
         try {
             List<android.content.pm.ProviderInfo> providers = getProviderInfoList(data);
@@ -604,7 +598,7 @@ public class BActivityThread extends IBActivityThread.Stub {
                     Slog.d(TAG, "Successfully installed provider: " + providerInfo.name);
                 } catch (Exception e) {
                     Slog.w(TAG, "Failed to install provider " + providerInfo.name + ": " + e.getMessage());
-                    
+                    // Continue with other providers
                 }
             }
             
@@ -613,13 +607,15 @@ public class BActivityThread extends IBActivityThread.Stub {
         }
     }
     
-    
+    /**
+     * Get application info from bind application data
+     */
     private android.content.pm.ApplicationInfo getApplicationInfo(Object data) {
         try {
-            
+            // Try to get application info from our custom data object
             if (data != null) {
                 try {
-                    
+                    // Use reflection to call getInfo() method
                     Method getInfoMethod = data.getClass().getMethod("getInfo");
                     ApplicationInfo appInfo = (ApplicationInfo) getInfoMethod.invoke(data);
                     if (appInfo != null) {
@@ -630,7 +626,7 @@ public class BActivityThread extends IBActivityThread.Stub {
                 }
             }
             
-            
+            // Fallback: try to get from package manager
             String packageName = ChiyuanVACore.getAppPackageName();
             if (packageName != null) {
                 PackageInfo packageInfo = ChiyuanVACore.getBPackageManager().getPackageInfo(packageName, 0, getUserId());
@@ -644,16 +640,18 @@ public class BActivityThread extends IBActivityThread.Stub {
         }
     }
     
-    
+    /**
+     * Get class loader for application
+     */
     private ClassLoader getClassLoader(android.content.pm.ApplicationInfo appInfo) {
         try {
-            
+            // ApplicationInfo doesn't have a classLoader field, so we need to create one
             String sourceDir = appInfo.sourceDir;
             if (sourceDir != null) {
                 return new dalvik.system.PathClassLoader(sourceDir, ClassLoader.getSystemClassLoader());
             }
             
-            
+            // Fallback to system class loader
             return ClassLoader.getSystemClassLoader();
         } catch (Exception e) {
             Slog.w(TAG, "Error getting class loader: " + e.getMessage());
@@ -661,15 +659,17 @@ public class BActivityThread extends IBActivityThread.Stub {
         }
     }
 
-    
+    /**
+     * Create application from application info
+     */
     private Application createApplication(android.content.pm.ApplicationInfo appInfo) {
         try {
-            
+            // Create a basic application instance
             ClassLoader classLoader = getClassLoader(appInfo);
             Class<?> appClass = classLoader.loadClass(appInfo.className);
             Application application = (Application) appClass.newInstance();
             
-            
+            // Ensure the application has a proper base context
             ensureApplicationBaseContext(application, appInfo);
             
             return application;
@@ -679,30 +679,32 @@ public class BActivityThread extends IBActivityThread.Stub {
         }
     }
     
-    
+    /**
+     * Ensure application has a proper base context
+     */
     private void ensureApplicationBaseContext(Application application, android.content.pm.ApplicationInfo appInfo) {
         try {
-            
+            // Check if application already has a base context
             if (application.getBaseContext() != null) {
                 Slog.d(TAG, "Application already has base context: " + appInfo.className);
                 return;
             }
             
-            
+            // Create a package context for the application
             Context packageContext = createPackageContext(appInfo);
             if (packageContext == null) {
                 Slog.w(TAG, "Could not create package context for application: " + appInfo.className + ", using fallback");
-                
+                // Use a fallback context that will never be null
                 packageContext = createFallbackContext(appInfo.packageName);
             }
             
-            
+            // Ensure the package context is not null
             if (packageContext == null) {
                 Slog.e(TAG, "Failed to create any context for application: " + appInfo.className);
                 return;
             }
             
-            
+            // Attach the base context to the application
             try {
                 Method attachBaseContext = Application.class.getDeclaredMethod("attachBaseContext", Context.class);
                 attachBaseContext.setAccessible(true);
@@ -717,7 +719,9 @@ public class BActivityThread extends IBActivityThread.Stub {
         }
     }
     
-    
+    /**
+     * Create a fallback context that will never be null
+     */
     private Context createFallbackContext(String packageName) {
         try {
             Context baseContext = ChiyuanVACore.getContext();
@@ -726,7 +730,7 @@ public class BActivityThread extends IBActivityThread.Stub {
                 return null;
             }
             
-            
+            // Create a safe context wrapper that provides all necessary methods
             return new ContextWrapper(baseContext) {
                 @Override
                 public String getPackageName() {
@@ -789,13 +793,15 @@ public class BActivityThread extends IBActivityThread.Stub {
         }
     }
     
-    
+    /**
+     * Get provider info list from bind application data
+     */
     private List<android.content.pm.ProviderInfo> getProviderInfoList(Object data) {
         try {
-            
+            // Try to get provider info from our custom data object
             if (data != null) {
                 try {
-                    
+                    // Use reflection to call getProviders() method
                     Method getProvidersMethod = data.getClass().getMethod("getProviders");
                     List<ProviderInfo> providers = (List<ProviderInfo>) getProvidersMethod.invoke(data);
                     if (providers != null) {
@@ -806,7 +812,7 @@ public class BActivityThread extends IBActivityThread.Stub {
                 }
             }
             
-            
+            // Fallback: return empty list
             return new ArrayList<>();
         } catch (Exception e) {
             Slog.e(TAG, "Error getting provider info list", e);
@@ -814,31 +820,33 @@ public class BActivityThread extends IBActivityThread.Stub {
         }
     }
     
-    
+    /**
+     * Install content provider
+     */
     private void installContentProvider(Application application, android.content.pm.ProviderInfo providerInfo) {
         try {
-            
+            // Check if application is null
             if (application == null) {
                 Slog.w(TAG, "Application is null, cannot install content provider: " + providerInfo.name);
                 return;
             }
             
-            
+            // Check if application has a valid class loader
             ClassLoader classLoader = application.getClassLoader();
             if (classLoader == null) {
                 Slog.w(TAG, "Application class loader is null, using system class loader for: " + providerInfo.name);
                 classLoader = ClassLoader.getSystemClassLoader();
             }
             
-            
+            // Create and install the content provider
             android.content.ContentProvider provider = (android.content.ContentProvider) classLoader
                 .loadClass(providerInfo.name).newInstance();
             
-            
+            // Attach the provider to the application
             provider.attachInfo(application, providerInfo);
             
-            
-            
+            // Note: ContentResolver.getContentProvider() doesn't exist
+            // The provider is automatically registered when attachInfo is called
             Slog.d(TAG, "Content provider installed: " + providerInfo.name);
             
         } catch (Exception e) {
@@ -846,7 +854,9 @@ public class BActivityThread extends IBActivityThread.Stub {
         }
     }
     
-    
+    /**
+     * Set application in ActivityThread
+     */
     private void setApplication(Application application) {
         try {
             mInitialApplication = application;
@@ -860,7 +870,7 @@ public class BActivityThread extends IBActivityThread.Stub {
     private void handleSecurityException(SecurityException se, String packageName, String processName, Context packageContext) {
         Slog.w(TAG, "Handling SecurityException for " + packageName);
         
-        
+        // Try to create a basic application without problematic operations
         try {
                             Application basicApp = createMinimalApplication(packageContext, packageName);
             if (basicApp != null) {
@@ -868,7 +878,7 @@ public class BActivityThread extends IBActivityThread.Stub {
                 BRActivityThread.get(ChiyuanVACore.mainThread())._set_mInitialApplication(mInitialApplication);
                 ContextCompat.fix(mInitialApplication);
                 
-                
+                // Skip problematic operations
                 Slog.w(TAG, "Created basic application, skipping problematic operations");
                 return;
             }
@@ -876,7 +886,7 @@ public class BActivityThread extends IBActivityThread.Stub {
             Slog.e(TAG, "Failed to create basic application after SecurityException: " + e.getMessage());
         }
         
-        
+        // If all else fails, re-throw the security exception
         throw new RuntimeException("Unable to handle SecurityException", se);
     }
 
@@ -891,10 +901,10 @@ public class BActivityThread extends IBActivityThread.Stub {
                     }
                 } catch (SecurityException se) {
                     Slog.w(TAG, "SecurityException installing provider " + providerInfo.name + ": " + se.getMessage());
-                    
+                    // Continue with other providers
                 } catch (Throwable t) {
                     Slog.w(TAG, "Error installing provider " + providerInfo.name + ": " + t.getMessage());
-                    
+                    // Continue with other providers
                 }
             }
         } finally {
@@ -917,13 +927,15 @@ public class BActivityThread extends IBActivityThread.Stub {
         return null;
     }
 
-    
+    /**
+     * Create a minimal package context when the actual APK is not available
+     */
     private static Context createMinimalPackageContext(ApplicationInfo info) {
         try {
-            
+            // Create a context that doesn't require the actual APK
             Context baseContext = ChiyuanVACore.getContext();
             
-            
+            // Try to create a context with minimal flags
             try {
                 Context packageContext = baseContext.createPackageContext(info.packageName, 0);
                 if (packageContext != null) {
@@ -934,7 +946,7 @@ public class BActivityThread extends IBActivityThread.Stub {
                 Slog.w(TAG, "Failed to create package context with minimal flags for " + info.packageName + ": " + e.getMessage());
             }
             
-            
+            // Try to create a context without any flags
             try {
                 Context packageContext = baseContext.createPackageContext(info.packageName, Context.CONTEXT_IGNORE_SECURITY);
                 if (packageContext != null) {
@@ -945,7 +957,7 @@ public class BActivityThread extends IBActivityThread.Stub {
                 Slog.w(TAG, "Failed to create package context with ignore security for " + info.packageName + ": " + e.getMessage());
             }
             
-            
+            // Try to create a context with just the package name
             try {
                 Context packageContext = baseContext.createPackageContext(info.packageName, Context.CONTEXT_INCLUDE_CODE);
                 if (packageContext != null) {
@@ -960,17 +972,19 @@ public class BActivityThread extends IBActivityThread.Stub {
             Slog.e(TAG, "Failed to create minimal package context for " + info.packageName + ": " + e.getMessage());
         }
         
-        
+        // Last resort: return the base context with package name wrapper
         Slog.w(TAG, "Using base context as fallback for " + info.packageName);
         return createWrappedBaseContext(info.packageName);
     }
 
-    
+    /**
+     * Create a wrapped base context that pretends to be a package context
+     */
     private static Context createWrappedBaseContext(String packageName) {
         try {
             Context baseContext = ChiyuanVACore.getContext();
             
-            
+            // Create a wrapper context that provides the package name
             return new ContextWrapper(baseContext) {
                 @Override
                 public String getPackageName() {
@@ -999,7 +1013,7 @@ public class BActivityThread extends IBActivityThread.Stub {
             };
         } catch (Exception e) {
             Slog.e(TAG, "Failed to create wrapped base context for " + packageName + ": " + e.getMessage());
-            
+            // Ultimate fallback: return the base context
             return ChiyuanVACore.getContext();
         }
     }
@@ -1022,45 +1036,6 @@ public class BActivityThread extends IBActivityThread.Stub {
         }
     }
 
-    private void initializeWebViewDataDirectory(String packageName, String processName) {
-        initializeWebViewDataDirectory(packageName, processName, getUserId());
-    }
-
-    private void initializeWebViewDataDirectory(String packageName, String processName, int userId) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-            return;
-        }
-        prepareWebViewStorage(packageName, processName, userId);
-        String suffix = userId + ":" + packageName + ":" + processName;
-        if (suffix.equals(sInitializedWebViewSuffix)) {
-            return;
-        }
-        try {
-            WebView.setDataDirectorySuffix(suffix);
-            sInitializedWebViewSuffix = suffix;
-            Slog.d(TAG, "Initialized WebView data directory suffix: " + suffix);
-        } catch (Throwable t) {
-            Slog.w(TAG, "Failed to initialize WebView data directory suffix: " + suffix + " - " + t.getMessage());
-        }
-    }
-
-    private void prepareWebViewStorage(String packageName, String processName, int userId) {
-        try {
-            FileUtils.mkdirs(BEnvironment.getDataDir(packageName, userId));
-            FileUtils.mkdirs(BEnvironment.getDeDataDir(packageName, userId));
-            FileUtils.mkdirs(BEnvironment.getDataCacheDir(packageName, userId));
-            FileUtils.mkdirs(new File(BEnvironment.getDataDir(packageName, userId), "app_webview"));
-            FileUtils.mkdirs(new File(BEnvironment.getDataDir(packageName, userId), "app_webview/Default"));
-            FileUtils.mkdirs(new File(BEnvironment.getDataCacheDir(packageName, userId), "WebView"));
-            FileUtils.mkdirs(new File(BEnvironment.getDeDataDir(packageName, userId), "app_webview"));
-            FileUtils.mkdirs(new File(BEnvironment.getDeDataDir(packageName, userId), "app_webview/Default"));
-            FileUtils.mkdirs(new File(BEnvironment.getDeDataDir(packageName, userId), "cache"));
-            Slog.d(TAG, "Prepared WebView storage for process: " + processName + ", package: " + packageName + ", user: " + userId);
-        } catch (Throwable t) {
-            Slog.w(TAG, "Failed to prepare WebView storage for process: " + processName + " - " + t.getMessage());
-        }
-    }
-
     public Object getPackageInfo() {
         return mBoundApplication.info;
     }
@@ -1073,7 +1048,40 @@ public class BActivityThread extends IBActivityThread.Stub {
         }
     }
 
+    public void loadXposed(Context context) {
+        String vPackageName = getAppPackageName();
+        String vProcessName = getAppProcessName();
+        if (!TextUtils.isEmpty(vPackageName) && !TextUtils.isEmpty(vProcessName) && BXposedManager.get().isXPEnable()) {
+            assert vPackageName != null;
+            assert vProcessName != null;
 
+            boolean isFirstApplication = vPackageName.equals(vProcessName);
+
+            List<InstalledModule> installedModules = BXposedManager.get().getInstalledModules();
+            for (InstalledModule installedModule : installedModules) {
+                if (!installedModule.enable) {
+                    continue;
+                }
+                try {
+                    // Remove all PineXposed.loadModule and PineXposed.onPackageLoad calls
+                } catch (Throwable e) {
+                    String msg = "Failed to load Xposed module: " + installedModule.getApplication().packageName
+                               + " (" + installedModule.getApplication().sourceDir + ")\n"
+                               + android.util.Log.getStackTraceString(e);
+                    android.util.Log.e("BlackBoxXposed", msg);
+                    // Optionally, collect errors for UI display
+                    // XposedErrorLogger.logModuleError(installedModule.getApplication().packageName, msg);
+                }
+            }
+            try {
+                // Remove all PineXposed.onPackageLoad calls
+            } catch (Throwable ignored) {
+            }
+        }
+        if (ChiyuanVACore.get().isHideXposed()) {
+            NativeCore.hideXposed();
+        }
+    }
 
     @Override
     public IBinder getActivityThread() {
@@ -1144,26 +1152,14 @@ public class BActivityThread extends IBActivityThread.Stub {
     @Override
     public void handleNewIntent(final IBinder token, final Intent intent) {
         mH.post(() -> {
-            Intent newIntent;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
-                newIntent = BRReferrerIntent.get()._new(intent, ChiyuanVACore.getHostPkg());
-            } else {
-                newIntent = intent;
-            }
+            // Always use ReferrerIntent (API 22+, always available on API 29+)
+            Intent newIntent = BRReferrerIntent.get()._new(intent, ChiyuanVACore.getHostPkg());
             Object mainThread = ChiyuanVACore.mainThread();
-            if (BRActivityThread.get(ChiyuanVACore.mainThread())._check_performNewIntents(null, null) != null) {
-                BRActivityThread.get(mainThread).performNewIntents(
-                        token,
-                        Collections.singletonList(newIntent)
-                );
-            } else if (BRActivityThreadNMR1.get(mainThread)._check_performNewIntents(null, null, false) != null) {
-                BRActivityThreadNMR1.get(mainThread).performNewIntents(
-                        token,
-                        Collections.singletonList(newIntent),
-                        true);
-            } else if (BRActivityThreadQ.get(mainThread)._check_handleNewIntent(null, null) != null) {
-                BRActivityThreadQ.get(mainThread).handleNewIntent(token, Collections.singletonList(newIntent));
-            }
+            // Simplified for minSdk 29 - use standard Android 10+ API
+            BRActivityThread.get(mainThread).performNewIntents(
+                    token,
+                    Collections.singletonList(newIntent)
+            );
         });
     }
 
@@ -1224,14 +1220,16 @@ public class BActivityThread extends IBActivityThread.Stub {
         }
     }
 
-    
+    /**
+     * Ensure that an activity has a valid context from the moment it's created
+     */
     public static void ensureActivityContext(Activity activity) {
         if (activity == null) {
             return;
         }
         
         try {
-            
+            // Check if the activity already has a valid context
             Context currentContext = activity.getBaseContext();
             if (currentContext != null) {
                 Slog.d(TAG, "Activity already has context: " + activity.getClass().getName());
@@ -1240,7 +1238,7 @@ public class BActivityThread extends IBActivityThread.Stub {
             
             Slog.w(TAG, "Activity has null context, ensuring valid context: " + activity.getClass().getName());
             
-            
+            // Get a valid context
             Context validContext = null;
             try {
                 validContext = getApplication();
@@ -1253,14 +1251,14 @@ public class BActivityThread extends IBActivityThread.Stub {
             }
             
             if (validContext != null) {
-                
+                // Create a simple package context for the activity
                 try {
                     Context packageContext = validContext.createPackageContext(
                         activity.getPackageName(),
                         Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY
                     );
                     
-                    
+                    // Try to set the base context using reflection
                     java.lang.reflect.Method attachBaseContext = Activity.class.getDeclaredMethod("attachBaseContext", Context.class);
                     attachBaseContext.setAccessible(true);
                     attachBaseContext.invoke(activity, packageContext);
@@ -1274,22 +1272,24 @@ public class BActivityThread extends IBActivityThread.Stub {
         }
     }
 
-    
+    /**
+     * Hook the ActivityThread to ensure all activities get valid contexts from the very beginning
+     */
     public static void hookActivityThread() {
         try {
-            
+            // Try to hook the ActivityThread to ensure all activities get valid contexts
             Object activityThread = ChiyuanVACore.mainThread();
             if (activityThread != null) {
-                
+                // Get the instrumentation from the ActivityThread
                 Instrumentation instrumentation = BRActivityThread.get(activityThread).mInstrumentation();
                 if (instrumentation != null) {
                     Slog.d(TAG, "Found ActivityThread instrumentation, ensuring it's our AppInstrumentation");
                     
-                    
+                    // Check if the instrumentation is our AppInstrumentation
                     if (!(instrumentation instanceof AppInstrumentation)) {
                         Slog.w(TAG, "ActivityThread instrumentation is not our AppInstrumentation, attempting to replace");
                         
-                        
+                        // Try to replace the instrumentation with our AppInstrumentation
                         try {
                             AppInstrumentation appInstrumentation = AppInstrumentation.get();
                             appInstrumentation.injectHook();
@@ -1311,12 +1311,14 @@ public class BActivityThread extends IBActivityThread.Stub {
         }
     }
 
-    
+    /**
+     * Create a minimal application when normal application creation fails
+     */
     private Application createMinimalApplication(Context packageContext, String packageName) {
         try {
             Slog.d(TAG, "Creating minimal application for " + packageName);
             
-            
+            // Create a basic Application object
             Application app = new Application() {
                 @Override
                 public void onCreate() {
@@ -1335,7 +1337,7 @@ public class BActivityThread extends IBActivityThread.Stub {
                 }
             };
             
-            
+            // Ensure the minimal application has a proper base context
             if (packageContext != null) {
                 try {
                     Method attachBaseContext = Application.class.getDeclaredMethod("attachBaseContext", Context.class);

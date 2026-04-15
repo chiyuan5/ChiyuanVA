@@ -46,6 +46,8 @@ import com.chiyuan.va.fake.service.IWebViewUpdateServiceProxy;
 import com.chiyuan.va.fake.service.IMiuiSecurityManagerProxy;
 import com.chiyuan.va.fake.service.SystemLibraryProxy;
 import com.chiyuan.va.fake.service.ReLinkerProxy;
+import com.chiyuan.va.fake.service.WebViewProxy;
+import com.chiyuan.va.fake.service.WebViewFactoryProxy;
 import com.chiyuan.va.fake.service.MediaRecorderProxy;
 import com.chiyuan.va.fake.service.AudioRecordProxy;
 import com.chiyuan.va.fake.service.MediaRecorderClassProxy;
@@ -123,8 +125,11 @@ public class HookManager {
             addInjector(new IAudioServiceProxy());
             addInjector(new ISensorPrivacyManagerProxy());
             addInjector(new ContentResolverProxy());
+            addInjector(new IWebViewUpdateServiceProxy());
             addInjector(new SystemLibraryProxy());
             addInjector(new ReLinkerProxy());
+            addInjector(new WebViewProxy());
+            addInjector(new WebViewFactoryProxy());
             addInjector(new WorkManagerProxy());
             addInjector(new MediaRecorderProxy());
             addInjector(new AudioRecordProxy());
@@ -151,7 +156,8 @@ public class HookManager {
             addInjector(new IDevicePolicyManagerProxy());
             addInjector(new IAccountManagerProxy());
             addInjector(new IConnectivityManagerProxy());
-            addInjector(new IAttributionSourceProxy());
+            addInjector(new IDnsResolverProxy());
+                    addInjector(new IAttributionSourceProxy());
         addInjector(new IContentProviderProxy());
         addInjector(new ISettingsSystemProxy());
         addInjector(new ISystemSensorManagerProxy());
@@ -264,8 +270,9 @@ public class HookManager {
         Slog.e(TAG, "Hook failed: " + hookName + " - " + e.getMessage(), e);
         
         
-        if (hookName.contains("ActivityManager") ||
+        if (hookName.contains("ActivityManager") || 
             hookName.contains("PackageManager") ||
+            hookName.contains("WebView") ||
             hookName.contains("ContentProvider")) {
             
             Slog.w(TAG, "Critical hook failed: " + hookName + ", attempting recovery");
@@ -286,7 +293,8 @@ public class HookManager {
     public boolean areCriticalHooksInstalled() {
         String[] criticalHooks = {
             "IActivityManagerProxy",
-            "IPackageManagerProxy",
+            "IPackageManagerProxy", 
+            "WebViewProxy",
             "IContentProviderProxy"
         };
         

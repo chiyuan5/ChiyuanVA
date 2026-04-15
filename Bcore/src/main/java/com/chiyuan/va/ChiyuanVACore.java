@@ -93,7 +93,7 @@ public class ChiyuanVACore extends ClientConfiguration {
             Slog.d(TAG, "Stack trace filter installed at class loading time");
             
             SocialMediaAppCrashPrevention.initialize();
-            Slog.d(TAG, "Social media app crash prevention initialized without custom WebView directory overrides");
+            Slog.d(TAG, "Social media app crash prevention initialized at class loading time");
             
             DexCrashPrevention.initialize();
             Slog.d(TAG, "DEX crash prevention initialized at class loading time");
