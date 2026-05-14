@@ -7,7 +7,7 @@ on:
       - main
       - master
     paths:
-      - ".github/workflows/build-bcore-and-blackreflection.yml"
+      - ".github/workflows/main.yml"
       - "settings.gradle"
       - "build.gradle"
       - "gradle.properties"

@@ -489,14 +489,14 @@
         android:usesCleartextTraffic="true">
         <provider
             android:name="com.chiyuan.va.core.system.SystemCallProvider"
-            android:authorities="${applicationId}.chiyuanva.SystemCallProvider"
+            android:authorities="com.chiyuan.va.chiyuanva.SystemCallProvider"
             android:exported="false"
             android:process="@string/black_box_service_name" />
 
         
         <provider
             android:name=".fake.provider.FileProvider"
-            android:authorities="${applicationId}.chiyuanva.FileProvider"
+            android:authorities="com.chiyuan.va.chiyuanva.FileProvider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
@@ -510,7 +510,7 @@
             android:exported="true"
             android:process="@string/black_box_service_name">
             <intent-filter>
-                <action android:name="${applicationId}.stub_receiver" />
+                <action android:name="com.chiyuan.va.stub_receiver" />
             </intent-filter>
         </receiver>
 
@@ -1805,252 +1805,252 @@
 
         <provider
             android:name=".proxy.ProxyContentProvider$P0"
-            android:authorities="${applicationId}.proxy_content_provider_0"
+            android:authorities="com.chiyuan.va.proxy_content_provider_0"
             android:exported="true"
             android:process=":p0" />
         <provider
             android:name=".proxy.ProxyContentProvider$P1"
-            android:authorities="${applicationId}.proxy_content_provider_1"
+            android:authorities="com.chiyuan.va.proxy_content_provider_1"
             android:exported="true"
             android:process=":p1" />
         <provider
             android:name=".proxy.ProxyContentProvider$P2"
-            android:authorities="${applicationId}.proxy_content_provider_2"
+            android:authorities="com.chiyuan.va.proxy_content_provider_2"
             android:exported="true"
             android:process=":p2" />
         <provider
             android:name=".proxy.ProxyContentProvider$P3"
-            android:authorities="${applicationId}.proxy_content_provider_3"
+            android:authorities="com.chiyuan.va.proxy_content_provider_3"
             android:exported="true"
             android:process=":p3" />
         <provider
             android:name=".proxy.ProxyContentProvider$P4"
-            android:authorities="${applicationId}.proxy_content_provider_4"
+            android:authorities="com.chiyuan.va.proxy_content_provider_4"
             android:exported="true"
             android:process=":p4" />
         <provider
             android:name=".proxy.ProxyContentProvider$P5"
-            android:authorities="${applicationId}.proxy_content_provider_5"
+            android:authorities="com.chiyuan.va.proxy_content_provider_5"
             android:exported="true"
             android:process=":p5" />
         <provider
             android:name=".proxy.ProxyContentProvider$P6"
-            android:authorities="${applicationId}.proxy_content_provider_6"
+            android:authorities="com.chiyuan.va.proxy_content_provider_6"
             android:exported="true"
             android:process=":p6" />
         <provider
             android:name=".proxy.ProxyContentProvider$P7"
-            android:authorities="${applicationId}.proxy_content_provider_7"
+            android:authorities="com.chiyuan.va.proxy_content_provider_7"
             android:exported="true"
             android:process=":p7" />
         <provider
             android:name=".proxy.ProxyContentProvider$P8"
-            android:authorities="${applicationId}.proxy_content_provider_8"
+            android:authorities="com.chiyuan.va.proxy_content_provider_8"
             android:exported="true"
             android:process=":p8" />
         <provider
             android:name=".proxy.ProxyContentProvider$P9"
-            android:authorities="${applicationId}.proxy_content_provider_9"
+            android:authorities="com.chiyuan.va.proxy_content_provider_9"
             android:exported="true"
             android:process=":p9" />
         <provider
             android:name=".proxy.ProxyContentProvider$P10"
-            android:authorities="${applicationId}.proxy_content_provider_10"
+            android:authorities="com.chiyuan.va.proxy_content_provider_10"
             android:exported="true"
             android:process=":p10" />
         <provider
             android:name=".proxy.ProxyContentProvider$P11"
-            android:authorities="${applicationId}.proxy_content_provider_11"
+            android:authorities="com.chiyuan.va.proxy_content_provider_11"
             android:exported="true"
             android:process=":p11" />
         <provider
             android:name=".proxy.ProxyContentProvider$P12"
-            android:authorities="${applicationId}.proxy_content_provider_12"
+            android:authorities="com.chiyuan.va.proxy_content_provider_12"
             android:exported="true"
             android:process=":p12" />
         <provider
             android:name=".proxy.ProxyContentProvider$P13"
-            android:authorities="${applicationId}.proxy_content_provider_13"
+            android:authorities="com.chiyuan.va.proxy_content_provider_13"
             android:exported="true"
             android:process=":p13" />
         <provider
             android:name=".proxy.ProxyContentProvider$P14"
-            android:authorities="${applicationId}.proxy_content_provider_14"
+            android:authorities="com.chiyuan.va.proxy_content_provider_14"
             android:exported="true"
             android:process=":p14" />
         <provider
             android:name=".proxy.ProxyContentProvider$P15"
-            android:authorities="${applicationId}.proxy_content_provider_15"
+            android:authorities="com.chiyuan.va.proxy_content_provider_15"
             android:exported="true"
             android:process=":p15" />
         <provider
             android:name=".proxy.ProxyContentProvider$P16"
-            android:authorities="${applicationId}.proxy_content_provider_16"
+            android:authorities="com.chiyuan.va.proxy_content_provider_16"
             android:exported="true"
             android:process=":p16" />
         <provider
             android:name=".proxy.ProxyContentProvider$P17"
-            android:authorities="${applicationId}.proxy_content_provider_17"
+            android:authorities="com.chiyuan.va.proxy_content_provider_17"
             android:exported="true"
             android:process=":p17" />
         <provider
             android:name=".proxy.ProxyContentProvider$P18"
-            android:authorities="${applicationId}.proxy_content_provider_18"
+            android:authorities="com.chiyuan.va.proxy_content_provider_18"
             android:exported="true"
             android:process=":p18" />
         <provider
             android:name=".proxy.ProxyContentProvider$P19"
-            android:authorities="${applicationId}.proxy_content_provider_19"
+            android:authorities="com.chiyuan.va.proxy_content_provider_19"
             android:exported="true"
             android:process=":p19" />
         <provider
             android:name=".proxy.ProxyContentProvider$P20"
-            android:authorities="${applicationId}.proxy_content_provider_20"
+            android:authorities="com.chiyuan.va.proxy_content_provider_20"
             android:exported="true"
             android:process=":p20" />
         <provider
             android:name=".proxy.ProxyContentProvider$P21"
-            android:authorities="${applicationId}.proxy_content_provider_21"
+            android:authorities="com.chiyuan.va.proxy_content_provider_21"
             android:exported="true"
             android:process=":p21" />
         <provider
             android:name=".proxy.ProxyContentProvider$P22"
-            android:authorities="${applicationId}.proxy_content_provider_22"
+            android:authorities="com.chiyuan.va.proxy_content_provider_22"
             android:exported="true"
             android:process=":p22" />
         <provider
             android:name=".proxy.ProxyContentProvider$P23"
-            android:authorities="${applicationId}.proxy_content_provider_23"
+            android:authorities="com.chiyuan.va.proxy_content_provider_23"
             android:exported="true"
             android:process=":p23" />
         <provider
             android:name=".proxy.ProxyContentProvider$P24"
-            android:authorities="${applicationId}.proxy_content_provider_24"
+            android:authorities="com.chiyuan.va.proxy_content_provider_24"
             android:exported="true"
             android:process=":p24" />
         <provider
             android:name=".proxy.ProxyContentProvider$P25"
-            android:authorities="${applicationId}.proxy_content_provider_25"
+            android:authorities="com.chiyuan.va.proxy_content_provider_25"
             android:exported="true"
             android:process=":p25" />
         <provider
             android:name=".proxy.ProxyContentProvider$P26"
-            android:authorities="${applicationId}.proxy_content_provider_26"
+            android:authorities="com.chiyuan.va.proxy_content_provider_26"
             android:exported="true"
             android:process=":p26" />
         <provider
             android:name=".proxy.ProxyContentProvider$P27"
-            android:authorities="${applicationId}.proxy_content_provider_27"
+            android:authorities="com.chiyuan.va.proxy_content_provider_27"
             android:exported="true"
             android:process=":p27" />
         <provider
             android:name=".proxy.ProxyContentProvider$P28"
-            android:authorities="${applicationId}.proxy_content_provider_28"
+            android:authorities="com.chiyuan.va.proxy_content_provider_28"
             android:exported="true"
             android:process=":p28" />
         <provider
             android:name=".proxy.ProxyContentProvider$P29"
-            android:authorities="${applicationId}.proxy_content_provider_29"
+            android:authorities="com.chiyuan.va.proxy_content_provider_29"
             android:exported="true"
             android:process=":p29" />
         <provider
             android:name=".proxy.ProxyContentProvider$P30"
-            android:authorities="${applicationId}.proxy_content_provider_30"
+            android:authorities="com.chiyuan.va.proxy_content_provider_30"
             android:exported="true"
             android:process=":p30" />
         <provider
             android:name=".proxy.ProxyContentProvider$P31"
-            android:authorities="${applicationId}.proxy_content_provider_31"
+            android:authorities="com.chiyuan.va.proxy_content_provider_31"
             android:exported="true"
             android:process=":p31" />
         <provider
             android:name=".proxy.ProxyContentProvider$P32"
-            android:authorities="${applicationId}.proxy_content_provider_32"
+            android:authorities="com.chiyuan.va.proxy_content_provider_32"
             android:exported="true"
             android:process=":p32" />
         <provider
             android:name=".proxy.ProxyContentProvider$P33"
-            android:authorities="${applicationId}.proxy_content_provider_33"
+            android:authorities="com.chiyuan.va.proxy_content_provider_33"
             android:exported="true"
             android:process=":p33" />
         <provider
             android:name=".proxy.ProxyContentProvider$P34"
-            android:authorities="${applicationId}.proxy_content_provider_34"
+            android:authorities="com.chiyuan.va.proxy_content_provider_34"
             android:exported="true"
             android:process=":p34" />
         <provider
             android:name=".proxy.ProxyContentProvider$P35"
-            android:authorities="${applicationId}.proxy_content_provider_35"
+            android:authorities="com.chiyuan.va.proxy_content_provider_35"
             android:exported="true"
             android:process=":p35" />
         <provider
             android:name=".proxy.ProxyContentProvider$P36"
-            android:authorities="${applicationId}.proxy_content_provider_36"
+            android:authorities="com.chiyuan.va.proxy_content_provider_36"
             android:exported="true"
             android:process=":p36" />
         <provider
             android:name=".proxy.ProxyContentProvider$P37"
-            android:authorities="${applicationId}.proxy_content_provider_37"
+            android:authorities="com.chiyuan.va.proxy_content_provider_37"
             android:exported="true"
             android:process=":p37" />
         <provider
             android:name=".proxy.ProxyContentProvider$P38"
-            android:authorities="${applicationId}.proxy_content_provider_38"
+            android:authorities="com.chiyuan.va.proxy_content_provider_38"
             android:exported="true"
             android:process=":p38" />
         <provider
             android:name=".proxy.ProxyContentProvider$P39"
-            android:authorities="${applicationId}.proxy_content_provider_39"
+            android:authorities="com.chiyuan.va.proxy_content_provider_39"
             android:exported="true"
             android:process=":p39" />
         <provider
             android:name=".proxy.ProxyContentProvider$P40"
-            android:authorities="${applicationId}.proxy_content_provider_40"
+            android:authorities="com.chiyuan.va.proxy_content_provider_40"
             android:exported="true"
             android:process=":p40" />
         <provider
             android:name=".proxy.ProxyContentProvider$P41"
-            android:authorities="${applicationId}.proxy_content_provider_41"
+            android:authorities="com.chiyuan.va.proxy_content_provider_41"
             android:exported="true"
             android:process=":p41" />
         <provider
             android:name=".proxy.ProxyContentProvider$P42"
-            android:authorities="${applicationId}.proxy_content_provider_42"
+            android:authorities="com.chiyuan.va.proxy_content_provider_42"
             android:exported="true"
             android:process=":p42" />
         <provider
             android:name=".proxy.ProxyContentProvider$P43"
-            android:authorities="${applicationId}.proxy_content_provider_43"
+            android:authorities="com.chiyuan.va.proxy_content_provider_43"
             android:exported="true"
             android:process=":p43" />
         <provider
             android:name=".proxy.ProxyContentProvider$P44"
-            android:authorities="${applicationId}.proxy_content_provider_44"
+            android:authorities="com.chiyuan.va.proxy_content_provider_44"
             android:exported="true"
             android:process=":p44" />
         <provider
             android:name=".proxy.ProxyContentProvider$P45"
-            android:authorities="${applicationId}.proxy_content_provider_45"
+            android:authorities="com.chiyuan.va.proxy_content_provider_45"
             android:exported="true"
             android:process=":p45" />
         <provider
             android:name=".proxy.ProxyContentProvider$P46"
-            android:authorities="${applicationId}.proxy_content_provider_46"
+            android:authorities="com.chiyuan.va.proxy_content_provider_46"
             android:exported="true"
             android:process=":p46" />
         <provider
             android:name=".proxy.ProxyContentProvider$P47"
-            android:authorities="${applicationId}.proxy_content_provider_47"
+            android:authorities="com.chiyuan.va.proxy_content_provider_47"
             android:exported="true"
             android:process=":p47" />
         <provider
             android:name=".proxy.ProxyContentProvider$P48"
-            android:authorities="${applicationId}.proxy_content_provider_48"
+            android:authorities="com.chiyuan.va.proxy_content_provider_48"
             android:exported="true"
             android:process=":p48" />
         <provider
             android:name=".proxy.ProxyContentProvider$P49"
-            android:authorities="${applicationId}.proxy_content_provider_49"
+            android:authorities="com.chiyuan.va.proxy_content_provider_49"
             android:exported="true"
             android:process=":p49" />
 
